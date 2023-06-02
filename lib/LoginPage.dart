@@ -51,7 +51,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
             style: TextStyle(color: Colors.white), // Цвет текста
           ),
-// test
+
                 SizedBox(height: 20.0),
                 // Поле ввода пароля
                 TextFormField(
