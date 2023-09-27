@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1074332481779",
+    "project_id": "placeandplay-98d09",
+    "storage_bucket": "placeandplay-98d09.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1074332481779:android:251c5fba635719a12d5f86",
+        "android_client_info": {
+          "package_name": "com.pp.placeandplay"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1074332481779-et0gn0s8rv0v4o117mkk3r3l3bujpp4j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkojeI9b_sAXRfLqTqW4DPjUFigmV4duo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1074332481779-et0gn0s8rv0v4o117mkk3r3l3bujpp4j.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
