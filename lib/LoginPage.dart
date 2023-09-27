@@ -92,6 +92,48 @@ class _LoginPageState extends State<LoginPage> {
             prefs.setString('first_name', firstName);
             prefs.setBool('isLoggedIn', true);
 
+
+            DocumentSnapshot userProfileSnapshot = await FirebaseFirestore.instance
+                .collection('userProfiles')
+                .doc(uid)
+                .get();
+
+            // Проверьте, существует ли документ и имеет ли он поле 'userProfiles'
+            if (userProfileSnapshot.exists) {
+              // userProfiles существует для пользователя
+              // Остальная часть кода
+              print('Профиль пользователя существует');
+              Navigator.pushReplacement(context,
+                  MaterialPageRoute(builder: (context) => ProfileScreen(userId: uid)));
+            } else {
+              // userProfiles пуст, перенаправляем на emptyScreen
+              print(
+                  'Профиль пользователя не существует, начинается регистрация сначала!');
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text('Профиль вашего пользователя не существует'),
+                    content: Text(
+                        'Начинаем регистрацию информации о пользователе.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Закрываем диалоговое окно
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => RegistrationProfilePage()),
+                          );
+                        },
+                        child: Text('Продолжить'),
+                      ),
+                    ],
+                  );
+                },
+              );
+            }
+
             // Ваши дальнейшие действия после записи данных
           }
         } else {
