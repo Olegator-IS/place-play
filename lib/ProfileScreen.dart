@@ -13,7 +13,8 @@ class ProfileScreen extends StatefulWidget {
   _ProfileScreenState createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen>
+    with SingleTickerProviderStateMixin {
   String? avatarURL;
   String? defaultAvatarURL;
   ImageProvider<Object>? avatarImageProvider;
@@ -32,7 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     // Создайте анимацию и контроллер
     _animationController = AnimationController(
       vsync: this,
-      duration: Duration(seconds: 5), // Длительность анимации
+      duration: Duration(seconds: 3), // Уменьшена длительность анимации
     );
 
     _rotationAnimation = Tween<double>(
@@ -70,6 +71,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       final storageReference =
       firebase_storage.FirebaseStorage.instance.ref().child('avatars/${widget.userId}.jpg');
       final downloadURL = await storageReference.getDownloadURL();
+
       setState(() {
         avatarURL = downloadURL;
         if (avatarURL != null) {
@@ -80,11 +82,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       print('Ошибка при загрузке URL аватарки: $e');
       _loadDefaultAvatar();
     } finally {
+      // Ждать немного, чтобы показать индикатор загрузки
+      await Future.delayed(Duration(seconds: 2));
       setState(() {
         _isLoading = false;
       });
     }
   }
+
 
   Future<void> _loadDefaultAvatar() async {
     try {
@@ -114,29 +119,35 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       firebase_storage.FirebaseStorage.instance.ref().child('avatars/${widget.userId}.jpg');
 
       try {
-        // Начать анимацию
+        // Начать анимацию на экране
         _animationController.forward();
 
-        await storageReference.putFile(imageFile);
-        final downloadURL = await storageReference.getDownloadURL();
+        // Выполнить остальной код в фоновом потоке
+        await Future.delayed(Duration.zero, () async {
+          await storageReference.putFile(imageFile);
+          final downloadURL = await storageReference.getDownloadURL();
 
-        await FirebaseFirestore.instance.collection('userProfiles').doc(widget.userId).update({
-          'photos': FieldValue.arrayUnion([downloadURL]),
+          await FirebaseFirestore.instance.collection('userProfiles').doc(widget.userId).update({
+            'photos': FieldValue.arrayUnion([downloadURL]),
+          });
+
+          setState(() {
+            avatarURL = downloadURL;
+          });
+          print('Аватар успешно обновлен');
+
+          // Завершить анимацию
+          _animationController.reverse();
         });
-
-        setState(() {
-          avatarURL = downloadURL;
-        });
-
-        print('Аватар успешно обновлен');
       } catch (e) {
         print('Ошибка при загрузке изображения: $e');
-      } finally {
-        // Завершить анимацию
-        _animationController.reverse();
       }
     }
   }
+
+
+
+
 
   void _showAvatarOptionsDialog(BuildContext context, String? currentAvatarURL) {
     showDialog(
@@ -196,7 +207,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Профиль пользователя'),
+        title: Text('Профиль'),
       ),
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance.collection('userProfiles').doc(widget.userId).get(),
@@ -211,9 +222,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             final userData = snapshot.data!.data() as Map<String, dynamic>;
             final firstName = userData['first_name'] as String;
             final lastName = userData['last_name'] as String;
-            final city = userData['city'] as String? ?? 'Не указан';
+            final age = userData['age'] as String;
+            final bio = userData['bio'] as String;
+            final gender = userData['gender'] as String;
+            final city = userData['location'] as String? ?? 'Не указан';
             final gamesInterestsString = userData['games_interests'];
-            final cleanedGamesInterestsString = gamesInterestsString.replaceAll('  ', ' ');
+            final cleanedGamesInterestsString =
+            gamesInterestsString.replaceAll('  ', ' ');
             final gamesInterestsList = cleanedGamesInterestsString.split(', ');
             final skillLevels = userData['skill_levels'] as Map<String, dynamic>;
 
@@ -235,7 +250,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         children: [
                           CircleAvatar(
                             radius: 80,
-                            backgroundImage: avatarImageProvider ?? defaultAvatarImageProvider,
+                            backgroundImage:
+                            avatarImageProvider ?? defaultAvatarImageProvider,
                           ),
                           if (_isLoading) CircularProgressIndicator(),
                         ],
@@ -251,45 +267,120 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     ),
                   ),
                   SizedBox(height: 8.0),
-                  Text(
-                    'Город: $city',
-                    style: TextStyle(
-                      fontSize: 18,
+                  Container(
+                    padding: EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.5),
+                          spreadRadius: 3,
+                          blurRadius: 5,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'Биография',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          bio,
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          'Город',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                           city,
+                          style: TextStyle(
+                            fontSize: 18,
+                          ),
+                        ),
+                        Text(
+                          'Возраст',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          age,
+                          style: TextStyle(
+                            fontSize: 18,
+                          ),
+                        ),
+                        Text(
+                          'Пол',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          gender,
+                          style: TextStyle(
+                            fontSize: 18,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  SizedBox(height: 16.0),
+
+
+                  SizedBox(height: 20.0),
 
                   ElevatedButton(
-                    onPressed: _toggleInterests, // Изменено на вызов функции _toggleInterests
+                    onPressed: () {
+                      // Измените высоту списка при нажатии кнопки
+                      _toggleInterests();
+                    },
                     child: Text('Заинтересованные виды спорта'),
                   ),
 
-                  // Используйте AnimatedContainer для анимации высоты
-                  AnimatedContainer(
-                    height: _interestsHeight,
-                    duration: Duration(seconds: 10), // Установите желаемую продолжительность анимации
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      itemCount: gamesInterestsList.length,
-                      itemBuilder: (context, index) {
-                        final sportInterest = gamesInterestsList[index];
-                        final skillLevel = skillLevels[sportInterest] ?? 0.0;
-                        final skillLevelDescription = _getSkillLevelDescription(skillLevel);
+                  // Используйте AnimatedSize для анимации высоты
+                  AnimatedSize(
+                    duration: Duration(seconds: 1), // Уменьшена длительность анимации
+                    curve: Curves.easeInOut, // Добавьте кривую анимации
+                    child: Container(
+                      height: _interestsHeight,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: gamesInterestsList.length,
+                        itemBuilder: (context, index) {
+                          final sportInterest = gamesInterestsList[index];
+                          final skillLevel = skillLevels[sportInterest] ?? 0.0;
+                          final skillLevelDescription =
+                          _getSkillLevelDescription(skillLevel);
 
-
-                        return Column(
-                          children: [
-                            ListTile(
-
-                              title: Text(sportInterest),
-                              subtitle: Text('Уровень навыков: $skillLevelDescription'),
-                            ),
-                          ],
-                        );
-                      },
+                          return Column(
+                            children: [
+                              ListTile(
+                                title: Text(sportInterest),
+                                subtitle:
+                                Text('Уровень навыков: $skillLevelDescription'),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ),
-                  ),
+                  )
                 ],
               ),
             );

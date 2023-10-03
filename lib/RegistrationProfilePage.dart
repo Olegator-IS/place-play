@@ -14,11 +14,15 @@ class RegistrationProfilePage extends StatefulWidget {
 }
 
 class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
+  final PageController _pageController = PageController(initialPage: 0);
+  int _currentPage = 0;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   List<String> _selectedGameInterests = [];
   String? _selectedGameInterest;
+  String? _selectedCommunicationPreferences;
+  String? _selectedMeetingPreferences;
   Map<String, double> _skillLevels = {};
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _availabilityController = TextEditingController();
@@ -28,6 +32,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
   final TextEditingController _partnerPreferencesController = TextEditingController();
   final TextEditingController _genderController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
+  final TextEditingController _birthdayController = TextEditingController();
   final TextEditingController _photosController = TextEditingController();
 
 
@@ -59,6 +64,24 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
   Future<List<String>> getGamesInterestsFromFirestore() async {
     final QuerySnapshot querySnapshot =
     await FirebaseFirestore.instance.collection('listOfSports').get();
+    return querySnapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return data['nameRu'] as String? ?? '';
+    }).toList();
+  }
+
+  Future<List<String>> getCommunicationPreferences() async {
+    final QuerySnapshot querySnapshot =
+    await FirebaseFirestore.instance.collection('communicationPreferences').get();
+    return querySnapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return data['nameRu'] as String? ?? '';
+    }).toList();
+  }
+
+  Future<List<String>> getMeetingPreferences() async {
+    final QuerySnapshot querySnapshot =
+    await FirebaseFirestore.instance.collection('meetingPreferences').get();
     return querySnapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
       return data['nameRu'] as String? ?? '';
@@ -145,7 +168,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                 currentStep: _currentStep,
                 onStepContinue: () {
                   setState(() {
-                    if (_currentStep < 7) {
+                    if (_currentStep < 21) {
                       _currentStep += 1;
                     } else {
                       _currentStep = 0;
@@ -160,7 +183,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                     }else if(_currentStep == 0){
                       _currentStep = 0;
                     }else {
-                      _currentStep = 7;
+                      _currentStep = 21;
                     }
                   });
                 },
@@ -178,6 +201,85 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                           controller: _lastNameController,
                           decoration: InputDecoration(labelText: 'Фамилия'),
                           readOnly: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Step(
+                    title: Text('Выберите пол'),
+                    content: Column(
+                      children: <Widget>[
+                        RadioListTile<String>(
+                          title: Text('Мужской'),
+                          value: 'Мужской',
+                          groupValue: _genderController.text,
+                          onChanged: (String? value) {
+                            setState(() {
+                              _genderController.text = value ?? '';
+                            });
+                          },
+                        ),
+                        RadioListTile<String>(
+                          title: Text('Женский'),
+                          value: 'Женский',
+                          groupValue: _genderController.text,
+                          onChanged: (String? value) {
+                            setState(() {
+                              _genderController.text = value ?? '';
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Step(
+                    title: Text('Укажите ваш возраст'),
+                    content: Column(
+                      children: <Widget>[
+                        TextFormField(
+                          controller: _ageController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(labelText: 'Возраст'),
+                          validator: (value) {
+                            if (value==null) {
+                              return 'Пожалуйста, введите свой возраст';
+                            }
+                            // Добавьте дополнительные проверки по вашему усмотрению
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Step(
+                    title: Text('Укажите дату вашего рождения'),
+                    content: Column(
+                      children: <Widget>[
+                        TextFormField(
+                          controller: _birthdayController,
+                          keyboardType: TextInputType.datetime,
+                          decoration: InputDecoration(labelText: 'Дата рождения'),
+                          validator: (value) {
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Step(
+                    title: Text('Укажите ваш город'),
+                    content: Column(
+                      children: <Widget>[
+                        TextFormField(
+                          controller: _locationController,
+                          decoration: InputDecoration(labelText: 'Город'),
+                          validator: (value) {
+                            if (value == null) {
+                              return 'Пожалуйста, введите свой город';
+                            }
+                            // Добавьте дополнительные проверки по вашему усмотрению
+                            return null;
+                          },
                         ),
                       ],
                     ),
@@ -272,18 +374,94 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                     ),
                   ),
                   Step(
-                    title: Text('Укажите ваш город'),
+                    title: Text('Предпочтительный стиль общения'),
                     content: Column(
                       children: <Widget>[
-                        TextFormField(
-                          controller: _locationController,
-                          decoration: InputDecoration(labelText: 'Город'),
-                          validator: (value) {
-                            if (value == null) {
-                              return 'Пожалуйста, введите свой город';
+                        FutureBuilder<List<String>>(
+                          future: getCommunicationPreferences(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return CircularProgressIndicator();
+                            } else if (snapshot.hasError) {
+                              return Text('Ошибка загрузки');
+                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                              return Text('Нет данных об стилях общения');
+                            } else {
+                              final communicationPreferences = snapshot.data!;
+                              return Column(
+                                children: <Widget>[
+                                  Column(
+                                    children: communicationPreferences.map((String preference) {
+                                      return RadioListTile<String>(
+                                        title: Text(preference),
+                                        value: preference,
+                                        groupValue: _selectedCommunicationPreferences,
+                                        onChanged: (String? value) {
+                                          setState(() {
+                                            _selectedCommunicationPreferences = value;
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      // Вы можете использовать _selectedCommunicationPreference
+                                      // для хранения выбранного стиля общения.
+                                      print('Выбранный стиль общения: $_selectedCommunicationPreferences');
+                                    },
+                                    child: Text('Сохранить выбор'),
+                                  ),
+                                ],
+                              );
                             }
-                            // Добавьте дополнительные проверки по вашему усмотрению
-                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Step(
+                    title: Text('Предпочтительное время активности'),
+                    content: Column(
+                      children: <Widget>[
+                        FutureBuilder<List<String>>(
+                          future: getMeetingPreferences(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return CircularProgressIndicator();
+                            } else if (snapshot.hasError) {
+                              return Text('Ошибка загрузки');
+                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                              return Text('Нет данных об стилях общения');
+                            } else {
+                              final meetingPreferences = snapshot.data!;
+                              return Column(
+                                children: <Widget>[
+                                  Column(
+                                    children: meetingPreferences.map((String preference) {
+                                      return RadioListTile<String>(
+                                        title: Text(preference),
+                                        value: preference,
+                                        groupValue: _selectedMeetingPreferences,
+                                        onChanged: (String? value) {
+                                          setState(() {
+                                            _selectedMeetingPreferences = value;
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      // Вы можете использовать _selectedCommunicationPreference
+                                      // для хранения выбранного стиля общения.
+                                      print('Выбранный стиль общения: $_selectedCommunicationPreferences');
+                                    },
+                                    child: Text('Сохранить выбор'),
+                                  ),
+                                ],
+                              );
+                            }
                           },
                         ),
                       ],
@@ -302,52 +480,8 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                       ],
                     ),
                   ),
-                  Step(
-                    title: Text('Выберите пол'),
-                    content: Column(
-                      children: <Widget>[
-                        RadioListTile<String>(
-                          title: Text('Мужской'),
-                          value: 'Мужской',
-                          groupValue: _genderController.text,
-                          onChanged: (String? value) {
-                            setState(() {
-                              _genderController.text = value ?? '';
-                            });
-                          },
-                        ),
-                        RadioListTile<String>(
-                          title: Text('Женский'),
-                          value: 'Женский',
-                          groupValue: _genderController.text,
-                          onChanged: (String? value) {
-                            setState(() {
-                              _genderController.text = value ?? '';
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  Step(
-                    title: Text('Укажите ваш возраст'),
-                    content: Column(
-                      children: <Widget>[
-                        TextFormField(
-                          controller: _ageController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(labelText: 'Возраст'),
-                          validator: (value) {
-                            if (value==null) {
-                              return 'Пожалуйста, введите свой возраст';
-                            }
-                            // Добавьте дополнительные проверки по вашему усмотрению
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
+
+
 
 
                   // Добавьте другие этапы регистрации сюда
