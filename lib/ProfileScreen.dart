@@ -15,6 +15,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
+  DocumentSnapshot? userDataSnapshot;
   String? avatarURL;
   String? defaultAvatarURL;
   ImageProvider<Object>? avatarImageProvider;
@@ -23,7 +24,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   late AnimationController _animationController;
   late Animation<double> _rotationAnimation;
   bool _showInterestsFields = false; // Переменная для определения, показывать или скрывать поля
+  bool _showActivityFields = false;
   double _interestsHeight = 0.0; // Высота поля интересов
+  double _activityHeight = 0.0; // Высота поля активности
 
   @override
   void initState() {
@@ -50,9 +53,35 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _toggleInterests() {
+    if (userDataSnapshot != null) {
+      final gamesInterestsString = userDataSnapshot!['games_interests'];
+      final cleanedGamesInterestsString =
+      gamesInterestsString.replaceAll('  ', ' ');
+      final gamesInterestsList = cleanedGamesInterestsString.split(', ');
+
+      setState(() {
+        _showInterestsFields = !_showInterestsFields;
+        if (_showInterestsFields) {
+          // Вычислите высоту на основе количества элементов и высоты каждого элемента
+          final numberOfInterests = gamesInterestsList.length;
+          print('test');
+          print(numberOfInterests);
+          final itemHeight = 73.0; // Предположим высоту каждого элемента
+          _interestsHeight = numberOfInterests * itemHeight;
+        } else {
+          _interestsHeight = 0.0;
+        }
+      });
+    }
+  }
+
+
+
+
+  void _toggleActivity() {
     setState(() {
-      _showInterestsFields = !_showInterestsFields;
-      _interestsHeight = _showInterestsFields ? 800.0 : 0.0; // Измените значение высоты по вашему желанию
+      _showActivityFields = !_showActivityFields;
+      _activityHeight = _showActivityFields ? 800.0 : 0.0; // Измените значение высоты по вашему желанию
     });
   }
 
@@ -219,6 +248,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           } else if (!snapshot.hasData || !snapshot.data!.exists) {
             return Center(child: Text('Профиль не найден'));
           } else {
+            userDataSnapshot = snapshot.data; // Установите userDataSnapshot
             final userData = snapshot.data!.data() as Map<String, dynamic>;
             final firstName = userData['first_name'] as String;
             final lastName = userData['last_name'] as String;
@@ -231,7 +261,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             gamesInterestsString.replaceAll('  ', ' ');
             final gamesInterestsList = cleanedGamesInterestsString.split(', ');
             final skillLevels = userData['skill_levels'] as Map<String, dynamic>;
-
+            final activity = userData['activity'];
+            final communicationPref = userData['communication_preferences'];
+            final familyStatus = userData['family_status'];
+            final meetingPref = userData['meeting_preferences'];
+            final partnerPref = userData['partner_preferences'];
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -352,6 +386,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: Text('Заинтересованные виды спорта'),
                   ),
 
+                  SizedBox(height: 20.0),
+
+
+
                   // Используйте AnimatedSize для анимации высоты
                   AnimatedSize(
                     duration: Duration(seconds: 1), // Уменьшена длительность анимации
@@ -380,7 +418,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                         },
                       ),
                     ),
-                  )
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Измените высоту списка при нажатии кнопки
+                      _toggleActivity();
+                    },
+                    child: Text('Уровень активности'),
+
+
+                  ),
                 ],
               ),
             );

@@ -1,3 +1,4 @@
+import 'package:date_time_picker/date_time_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -23,17 +24,25 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
   String? _selectedGameInterest;
   String? _selectedCommunicationPreferences;
   String? _selectedMeetingPreferences;
+  String? _selectedActivityPreferences;
+  String? _selectedFamilyStatus;
+  String? _selectedOpennessPreferences;
+  String? _selectedPartnerPreferences;
   Map<String, double> _skillLevels = {};
   final TextEditingController _locationController = TextEditingController();
-  final TextEditingController _availabilityController = TextEditingController();
-  final TextEditingController _meetingPreferencesController = TextEditingController();
-  final TextEditingController _communicationPreferencesController = TextEditingController();
+  // final TextEditingController _availabilityController = TextEditingController();
+  // final TextEditingController _meetingPreferencesController = TextEditingController();
+  // final TextEditingController _communicationPreferencesController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
-  final TextEditingController _partnerPreferencesController = TextEditingController();
+  // final TextEditingController _partnerPreferencesController = TextEditingController();
   final TextEditingController _genderController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
   final TextEditingController _birthdayController = TextEditingController();
   final TextEditingController _photosController = TextEditingController();
+  // final TextEditingController _activityController = TextEditingController();
+  // final TextEditingController _familyStatusController = TextEditingController();
+  // final TextEditingController _opennessController = TextEditingController();
+
 
 
   int _currentStep = 0;
@@ -88,6 +97,42 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
     }).toList();
   }
 
+  Future<List<String>> getActivityPreferences() async {
+    final QuerySnapshot querySnapshot =
+    await FirebaseFirestore.instance.collection('activityPreferences').get();
+    return querySnapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return data['nameRu'] as String? ?? '';
+    }).toList();
+  }
+
+  Future<List<String>> getFamilyStatus() async {
+    final QuerySnapshot querySnapshot =
+    await FirebaseFirestore.instance.collection('familyStatus').get();
+    return querySnapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return data['nameRu'] as String? ?? '';
+    }).toList();
+  }
+
+  Future<List<String>> getOpennessPreferences() async {
+    final QuerySnapshot querySnapshot =
+    await FirebaseFirestore.instance.collection('opennessPreferences').get();
+    return querySnapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return data['nameRu'] as String? ?? '';
+    }).toList();
+  }
+
+  Future<List<String>> getPartnerPreferences() async {
+    final QuerySnapshot querySnapshot =
+    await FirebaseFirestore.instance.collection('partnerPreferences').get();
+    return querySnapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return data['nameRu'] as String? ?? '';
+    }).toList();
+  }
+
   String _getSkillLevelDescription(double value) {
     if (value >= 0.0 && value <= 10.0) {
       return 'Не умею играть';
@@ -116,14 +161,18 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
         'games_interests': _selectedGameInterests.join(', '),
         'skill_levels': _skillLevels,
         'location': _locationController.text,
-        'availability': _availabilityController.text,
-        'meeting_preferences': _meetingPreferencesController.text,
-        'communication_preferences': _communicationPreferencesController.text,
+        // 'availability': _availabilityController.text,
+        'meeting_preferences': _selectedMeetingPreferences,
+        'communication_preferences': _selectedCommunicationPreferences,
         'bio': _bioController.text,
-        'partner_preferences': _partnerPreferencesController.text,
+        'partner_preferences': _selectedPartnerPreferences,
         'gender': _genderController.text,
         'age': _ageController.text,
         'photos': _photosController.text.split(','),
+        'activity':_selectedActivityPreferences,
+        'family_status':_selectedFamilyStatus,
+        'openness_controller':_selectedOpennessPreferences,
+        'birthday':_birthdayController.text,
       };
 
       try {
@@ -241,7 +290,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(labelText: 'Возраст'),
                           validator: (value) {
-                            if (value==null) {
+                            if (value?.isEmpty ?? true) {
                               return 'Пожалуйста, введите свой возраст';
                             }
                             // Добавьте дополнительные проверки по вашему усмотрению
@@ -255,14 +304,18 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                     title: Text('Укажите дату вашего рождения'),
                     content: Column(
                       children: <Widget>[
-                        TextFormField(
+                        DateTimePicker(
+                          type: DateTimePickerType.date,
+                          dateMask: 'dd.MM.yyyy',
                           controller: _birthdayController,
-                          keyboardType: TextInputType.datetime,
-                          decoration: InputDecoration(labelText: 'Дата рождения'),
-                          validator: (value) {
-                            return null;
-                          },
+                          initialDate: DateTime.now(), // Используйте DateTime.now() без toString()
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime.now(),
+                          icon: Icon(Icons.event),
+                          dateLabelText: 'Дата рождения',
+                          onChanged: (val) => setState(() {}),
                         ),
+
                       ],
                     ),
                   ),
@@ -404,14 +457,6 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                       );
                                     }).toList(),
                                   ),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      // Вы можете использовать _selectedCommunicationPreference
-                                      // для хранения выбранного стиля общения.
-                                      print('Выбранный стиль общения: $_selectedCommunicationPreferences');
-                                    },
-                                    child: Text('Сохранить выбор'),
-                                  ),
                                 ],
                               );
                             }
@@ -432,7 +477,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                             } else if (snapshot.hasError) {
                               return Text('Ошибка загрузки');
                             } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                              return Text('Нет данных об стилях общения');
+                              return Text('Нет данных о времени активности');
                             } else {
                               final meetingPreferences = snapshot.data!;
                               return Column(
@@ -451,13 +496,167 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                       );
                                     }).toList(),
                                   ),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      // Вы можете использовать _selectedCommunicationPreference
-                                      // для хранения выбранного стиля общения.
-                                      print('Выбранный стиль общения: $_selectedCommunicationPreferences');
-                                    },
-                                    child: Text('Сохранить выбор'),
+                                ],
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Step(
+                    title: Text('Ваш уровень активности'),
+                    content: Column(
+                      children: <Widget>[
+                        FutureBuilder<List<String>>(
+                          future: getActivityPreferences(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return CircularProgressIndicator();
+                            } else if (snapshot.hasError) {
+                              return Text('Ошибка загрузки');
+                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                              return Text('Нет данных об уровне активности');
+                            } else {
+                              final activityPreferences = snapshot.data!;
+                              return Column(
+                                children: <Widget>[
+                                  Column(
+                                    children: activityPreferences.map((String preference) {
+                                      return RadioListTile<String>(
+                                        title: Text(preference),
+                                        value: preference,
+                                        groupValue: _selectedActivityPreferences,
+                                        onChanged: (String? value) {
+                                          setState(() {
+                                            _selectedActivityPreferences = value;
+
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Step(
+                    title: Text('Семейное положение'),
+                    content: Column(
+                      children: <Widget>[
+                        FutureBuilder<List<String>>(
+                          future: getFamilyStatus(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return CircularProgressIndicator();
+                            } else if (snapshot.hasError) {
+                              return Text('Ошибка загрузки');
+                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                              return Text('Нет данных о семейном положении');
+                            } else {
+                              final familyStatusPreferences = snapshot.data!;
+                              return Column(
+                                children: <Widget>[
+                                  Column(
+                                    children: familyStatusPreferences.map((String preference) {
+                                      return RadioListTile<String>(
+                                        title: Text(preference),
+                                        value: preference,
+                                        groupValue: _selectedFamilyStatus,
+                                        onChanged: (String? value) {
+                                          setState(() {
+                                            _selectedFamilyStatus = value;
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Step(
+                    title: Text('Уровень открытости к новым знакомствам'),
+                    content: Column(
+                      children: <Widget>[
+                        FutureBuilder<List<String>>(
+                          future: getOpennessPreferences(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return CircularProgressIndicator();
+                            } else if (snapshot.hasError) {
+                              return Text('Ошибка загрузки');
+                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                              return Text('Нет данных об уровне открытости');
+                            } else {
+                              final opennessPreferences = snapshot.data!;
+                              return Column(
+                                children: <Widget>[
+                                  Column(
+                                    children: opennessPreferences.map((String preference) {
+                                      return RadioListTile<String>(
+                                        title: Text(preference),
+                                        value: preference,
+                                        groupValue: _selectedOpennessPreferences,
+                                        onChanged: (String? value) {
+                                          setState(() {
+                                            _selectedOpennessPreferences = value;
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Step(
+                    title: Text('Укажите предпочтительную группу общения'),
+                    content: Column(
+                      children: <Widget>[
+                        FutureBuilder<List<String>>(
+                          future: getPartnerPreferences(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return CircularProgressIndicator();
+                            } else if (snapshot.hasError) {
+                              return Text('Ошибка загрузки');
+                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                              return Text('Нет данных о группе общения');
+                            } else {
+                              final partnerPreferences = snapshot.data!;
+                              return Column(
+                                children: <Widget>[
+                                  Column(
+                                    children: partnerPreferences.map((String preference) {
+                                      return RadioListTile<String>(
+                                        title: Text(preference),
+                                        value: preference,
+                                        groupValue: _selectedPartnerPreferences,
+                                        onChanged: (String? value) {
+                                          setState(() {
+                                            _selectedPartnerPreferences = value;
+
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
                                   ),
                                 ],
                               );
