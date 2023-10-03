@@ -30,6 +30,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
   final TextEditingController _ageController = TextEditingController();
   final TextEditingController _photosController = TextEditingController();
 
+
   int _currentStep = 0;
 
   @override
@@ -144,7 +145,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                 currentStep: _currentStep,
                 onStepContinue: () {
                   setState(() {
-                    if (_currentStep < 13) {
+                    if (_currentStep < 7) {
                       _currentStep += 1;
                     } else {
                       _currentStep = 0;
@@ -152,11 +153,14 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                   });
                 },
                 onStepCancel: () {
+                  print(_currentStep);
                   setState(() {
                     if (_currentStep > 0) {
                       _currentStep -= 1;
-                    } else {
-                      _currentStep = 13;
+                    }else if(_currentStep == 0){
+                      _currentStep = 0;
+                    }else {
+                      _currentStep = 7;
                     }
                   });
                 },
@@ -204,9 +208,13 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                       );
                                     }).toList(),
                                     onChanged: (String? value) {
-                                      setState(() {
-                                        _selectedGameInterest = value;
-                                      });
+                                      if (value != null && !_selectedGameInterests.contains(value)) {
+                                        setState(() {
+                                          _selectedGameInterest = value;
+                                          _selectedGameInterests.add(value);
+                                          _selectedGameInterest = null;
+                                        });
+                                      }
                                     },
                                     decoration: InputDecoration(labelText: 'Вид спорта'),
                                   ),
@@ -263,6 +271,84 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                       ],
                     ),
                   ),
+                  Step(
+                    title: Text('Укажите ваш город'),
+                    content: Column(
+                      children: <Widget>[
+                        TextFormField(
+                          controller: _locationController,
+                          decoration: InputDecoration(labelText: 'Город'),
+                          validator: (value) {
+                            if (value == null) {
+                              return 'Пожалуйста, введите свой город';
+                            }
+                            // Добавьте дополнительные проверки по вашему усмотрению
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Step(
+                    title: Text('О себе'),
+                    content: Column(
+                      children: <Widget>[
+                        TextFormField(
+                          controller: _bioController,
+                          decoration: InputDecoration(labelText: 'О себе'),
+                          maxLines: null, // Разрешает многострочный ввод текста
+                        ),
+                      ],
+                    ),
+                  ),
+                  Step(
+                    title: Text('Выберите пол'),
+                    content: Column(
+                      children: <Widget>[
+                        RadioListTile<String>(
+                          title: Text('Мужской'),
+                          value: 'Мужской',
+                          groupValue: _genderController.text,
+                          onChanged: (String? value) {
+                            setState(() {
+                              _genderController.text = value ?? '';
+                            });
+                          },
+                        ),
+                        RadioListTile<String>(
+                          title: Text('Женский'),
+                          value: 'Женский',
+                          groupValue: _genderController.text,
+                          onChanged: (String? value) {
+                            setState(() {
+                              _genderController.text = value ?? '';
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Step(
+                    title: Text('Укажите ваш возраст'),
+                    content: Column(
+                      children: <Widget>[
+                        TextFormField(
+                          controller: _ageController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(labelText: 'Возраст'),
+                          validator: (value) {
+                            if (value==null) {
+                              return 'Пожалуйста, введите свой возраст';
+                            }
+                            // Добавьте дополнительные проверки по вашему усмотрению
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
 
                   // Добавьте другие этапы регистрации сюда
                   // ...
