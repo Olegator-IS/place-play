@@ -257,6 +257,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             final gender = userData['gender'] as String;
             final city = userData['location'] as String? ?? 'Не указан';
             final gamesInterestsString = userData['games_interests'];
+            final birthday = userData['birthday'];
             final cleanedGamesInterestsString =
             gamesInterestsString.replaceAll('  ', ' ');
             final gamesInterestsList = cleanedGamesInterestsString.split(', ');
@@ -318,21 +319,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(
-                          'Биография',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          bio,
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        Text(
+                       Text(
                           'Город',
                           style: TextStyle(
                             fontSize: 20,
@@ -369,6 +356,46 @@ class _ProfileScreenState extends State<ProfileScreen>
                           gender,
                           style: TextStyle(
                             fontSize: 18,
+                          ),
+                        ),
+                        Text(
+                          'Дата рождения',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          birthday,
+                          style: TextStyle(
+                            fontSize: 18,
+                          ),
+                        ),
+                        Text(
+                          'Семейное положение',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          familyStatus,
+                          style: TextStyle(
+                            fontSize: 18,
+                          ),
+                        ),
+                        Text(
+                          'Биография',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          bio,
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.black87,
                           ),
                         ),
                       ],
@@ -419,14 +446,21 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
                   ),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Измените высоту списка при нажатии кнопки
-                      _toggleActivity();
-                    },
-                    child: Text('Уровень активности'),
-
-
+                  // ElevatedButton(
+                  //   onPressed: () {
+                  //     // Измените высоту списка при нажатии кнопки
+                  //     _toggleActivity();
+                  //   },
+                  //   child: Text('Уровень активности'),
+                  //
+                  //
+                  //
+                  // ),
+                  Text(
+                    activity,
+                    style: TextStyle(
+                      fontSize: 18,
+                    ),
                   ),
                 ],
               ),
