@@ -25,6 +25,8 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   String firstName = "";
   bool _isLoading = false;
+  bool _isLoggingIn = false; // Добавьте переменную для отслеживания анимации
+
 
 
   Future<void> _signInWithFacebook() async {
@@ -118,7 +120,10 @@ class _LoginPageState extends State<LoginPage> {
                         'Начинаем регистрацию информации о пользователе.'),
                     actions: [
                       TextButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          setState(() {
+                            _isLoggingIn = true; // Устанавливаем состояние "в процессе входа"
+                          });
                           Navigator.of(context).pop(); // Закрываем диалоговое окно
                           Navigator.pushReplacement(
                             context,
@@ -150,6 +155,10 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       print('Error: $e');
       // Обработайте ошибку аутентификации через Facebook здесь
+    }finally {
+      setState(() {
+        _isLoggingIn = false; // Устанавливаем состояние "завершено вход"
+      });
     }
   }
 
@@ -160,7 +169,11 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {
       _isLoading = true;
     });
+    setState(() {
+      _isLoggingIn = true; // Устанавливаем состояние "в процессе входа"
+    });
 
+    // Задержка выполнения входа на 10 секунд для анимации
     try {
       await _auth.signInWithEmailAndPassword(
         email: _emailController.text,
@@ -184,7 +197,14 @@ class _LoginPageState extends State<LoginPage> {
         if (userSnapshot.exists) {
           Map<String, dynamic>? userData = userSnapshot.data() as Map<String, dynamic>?;
 
-          if (userData != null && userData.containsKey('first_name')) {
+
+
+          DocumentSnapshot userProfileSnapshot = await FirebaseFirestore.instance
+              .collection('userProfiles')
+              .doc(uid)
+              .get();
+
+          if (userData != null && userProfileSnapshot.exists) {
             // userProfiles существует для пользователя
             print('Профиль пользователя существует');
             // Теперь у вас есть 'userProfiles' пользователя
@@ -246,7 +266,13 @@ class _LoginPageState extends State<LoginPage> {
           duration: Duration(seconds: 3),
         ),
       );
+    }finally {
+      setState(() {
+        _isLoggingIn = false; // Устанавливаем состояние "завершено вход"
+      });
     }
+
+
 
     setState(() {
       _isLoading = false;
@@ -350,8 +376,10 @@ class _LoginPageState extends State<LoginPage> {
 
                 SizedBox(height: 20.0),
                 ElevatedButton(
-                  onPressed: _signInWithEmailAndPassword,
-                  child: Text(
+                  onPressed: _isLoggingIn ? null : _signInWithEmailAndPassword,
+                  child: _isLoggingIn
+                      ? CircularProgressIndicator() // Анимация при входе
+                      : Text(
                     'LOGIN',
                     style: TextStyle(fontSize: 24),
                   ),

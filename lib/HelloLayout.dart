@@ -5,7 +5,8 @@ import 'package:placeandplay/EmptyScreen.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Импорт пакета shared_preferences
 import 'LoginPage.dart';
 import 'ProfileScreen.dart';
-import 'RegistrationProfilePage.dart'; // Импорт вашего LoginPage или другого экрана после успешной авторизации
+import 'RegistrationProfilePage.dart';
+import 'SuccessScreen.dart'; // Импорт вашего LoginPage или другого экрана после успешной авторизации
 
 class HelloLayout extends StatefulWidget {
   @override
@@ -57,8 +58,51 @@ class _HelloLayoutState extends State<HelloLayout> {
 
       User? user = FirebaseAuth.instance.currentUser;
 
-      if (user != null && user.emailVerified) {
+
+      if (user != null) {
+        if(!user.emailVerified){
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text('Ваш EMAIL является неподтвержденным,переходим на окно подтверждения EMAIL'),
+                content: Text(
+                    'Подтверждаем EMAIL'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Закрываем диалоговое окно
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => SuccessScreen()),
+                      );
+                    },
+                    child: Text('Продолжить'),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+
         String uid = user.uid;
+        // Тут буду проверять есть ли users коллекция
+        DocumentSnapshot usersCollection = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .get();
+
+        if(!usersCollection.exists){
+          prefs.setBool('isLoggedIn', false);
+          prefs.setString('first_name','');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (context) => LoginPage()),
+          );
+        }
+
 
         // Запросите документ пользователя в коллекции "userProfiles"
         DocumentSnapshot userProfileSnapshot = await FirebaseFirestore.instance
@@ -71,8 +115,12 @@ class _HelloLayoutState extends State<HelloLayout> {
           // userProfiles существует для пользователя
           // Остальная часть кода
           print('Профиль пользователя существует');
-          Navigator.pushReplacement(context,
-              MaterialPageRoute(builder: (context) => ProfileScreen(userId: uid)));
+          Future.delayed(Duration(seconds: 3), ()
+          {
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(
+                    builder: (context) => ProfileScreen(userId: uid)));
+          });
         } else {
           // userProfiles пуст, перенаправляем на emptyScreen
           print(
@@ -131,6 +179,9 @@ class _HelloLayoutState extends State<HelloLayout> {
           _greetingText = 'Доброй ночи';
         });
       }
+
+
+
 
       // Ожидаем 2 секунды и переходим на LoginPage
       Future.delayed(Duration(seconds: 8), () {

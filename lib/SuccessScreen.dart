@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:placeandplay/ProfileScreen.dart';
 
 import 'EmptyScreen.dart';
 import 'RegistrationProfilePage.dart';
@@ -36,20 +38,38 @@ class _SuccessScreenState extends State<SuccessScreen> {
   void handleEmailVerification() async {
     await checkEmailVerification();
 
+
+
+
+
+
+
     if (isEmailVerified) {
       // Установите verificationComplete в true, чтобы показать анимацию завершения
       setState(() {
         verificationComplete = true;
       });
 
+      String uid = _auth.currentUser.toString();
+      DocumentSnapshot userProfileSnapshot = await FirebaseFirestore.instance
+          .collection('userProfiles')
+          .doc(uid)
+          .get();
       // Подождите несколько секунд для отображения анимации
       await Future.delayed(Duration(seconds: 3));
-
-      // Перенаправьте пользователя на другой экран
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => RegistrationProfilePage()),
-      );
+      if(userProfileSnapshot.exists){
+        // Перенаправьте пользователя на другой экран
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => ProfileScreen(userId: uid)),
+        );
+      }else {
+        // Перенаправьте пользователя на другой экран
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => RegistrationProfilePage()),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

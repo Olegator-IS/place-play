@@ -37,16 +37,31 @@ class _RegistrationPageState extends State<RegistrationPage> {
   String _password = ''; // Добавьте переменную для хранения пароля
   String _firstName = '';
   String _lastName = '';
+  bool _isRegistering = false; // Добавьте это состояние
+  String _errorMessage = ''; // Добавьте переменную для хранения текста ошибки
+
+
 
   Future<void> _registerUser() async {
+    setState(() {
+      _isRegistering = true; // Показываем индикатор загрузки перед началом регистрации
+    });
+
     try {
+      // Здесь можете добавить виджет индикатора загрузки
+      // Например, CircularProgressIndicator()
+
+      if (_isRegistering) CircularProgressIndicator();
       UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
         email: _email, // Значение из вашего TextFormField для email
         password: _password, // Значение из вашего TextFormField для пароля
       );
 
-      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set({
         'first_name': _firstName,
         'last_name': _lastName,
         'email': _email,
@@ -57,17 +72,42 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => SuccessScreen()), // Замените "SuccessScreen()" на экран с сообщением об успешной регистрации
+        MaterialPageRoute(builder: (context) => SuccessScreen()),
       );
 
       // Регистрация прошла успешно
       // Теперь можно сохранить дополнительные данные пользователя в Firestore или Realtime Database, как вы описали в предыдущем вопросе.
+
+      // Завершаем индикатор загрузки
+      setState(() {
+        _isRegistering = false;
+      });
     } catch (e) {
       // Ошибка регистрации
       print('Ошибка регистрации: $e');
-      print('Password '+_password);
-      print('Email  '+_email);
-      // Обработайте ошибку и предупредите пользователя, если что-то пошло не так.
+      print('Password ' + _password);
+      print('Email  ' + _email);
+      if (e.toString().contains('email-already-in-use')) {
+        _errorMessage = 'Пользователь с этим email уже зарегистрирован.';
+      } else if (e.toString().contains('invalid-email')) {
+        _errorMessage = 'Введен некорректный email адрес.';
+      } else if (e.toString().contains('weak-password')) {
+        _errorMessage = 'Пароль слишком слабый. Пароль должен содержать минимум 6 символов.';
+      } else {
+        _errorMessage = 'Произошла ошибка при регистрации. Пожалуйста, попробуйте ещё раз.';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_errorMessage), // Выводим текст ошибки
+          duration: Duration(seconds: 5),
+        ),
+      );
+
+      // Завершаем индикатор загрузки
+      setState(() {
+        _isRegistering = false;
+      });
     }
   }
 
@@ -321,16 +361,20 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         ),
                         SizedBox(height: 16.0),
                         ElevatedButton(
-                          onPressed: () {
-                            if (_formKey.currentState!.validate() && _agreedToTerms) {
-
-                              _registerUser(); // Вызываем функцию для регистрации
-                              // В данном месте можно добавить индикатор загрузки или другой пользовательский опыт, чтобы показать, что регистрация выполняется.
-                            }
-                          },
-                          child: Text(
+                          onPressed: _isRegistering ? null : _registerUser,
+                          child: _isRegistering
+                              ? CircularProgressIndicator() // Анимация при входе
+                              : Text(
                             'Зарегистрироваться',
                             style: TextStyle(fontSize: 24),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            primary: Colors.blue,
+                            onPrimary: Colors.white,
+                            padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                         ),
 
