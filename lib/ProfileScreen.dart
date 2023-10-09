@@ -59,21 +59,24 @@ class _ProfileScreenState extends State<ProfileScreen>
       gamesInterestsString.replaceAll('  ', ' ');
       final gamesInterestsList = cleanedGamesInterestsString.split(', ');
 
-      setState(() {
-        _showInterestsFields = !_showInterestsFields;
-        if (_showInterestsFields) {
-          // Вычислите высоту на основе количества элементов и высоты каждого элемента
-          final numberOfInterests = gamesInterestsList.length;
-          print('test');
-          print(numberOfInterests);
-          final itemHeight = 73.0; // Предположим высоту каждого элемента
-          _interestsHeight = numberOfInterests * itemHeight;
-        } else {
-          _interestsHeight = 0.0;
-        }
-      });
+      if (gamesInterestsList.isNotEmpty) {
+        setState(() {
+          _showInterestsFields = !_showInterestsFields;
+          if (_showInterestsFields) {
+            // Вычислите высоту на основе количества элементов и высоты каждого элемента
+            final numberOfInterests = gamesInterestsList.length;
+            print('test');
+            print(numberOfInterests);
+            final itemHeight = 73.0; // Предположим высоту каждого элемента
+            _interestsHeight = numberOfInterests * itemHeight;
+          } else {
+            _interestsHeight = 0.0;
+          }
+        });
+      }
     }
   }
+
 
 
 
@@ -112,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       _loadDefaultAvatar();
     } finally {
       // Ждать немного, чтобы показать индикатор загрузки
-      await Future.delayed(Duration(seconds: 2));
+      await Future.delayed(Duration(seconds: 3));
       setState(() {
         _isLoading = false;
       });
@@ -267,6 +270,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             final familyStatus = userData['family_status'];
             final meetingPref = userData['meeting_preferences'];
             final partnerPref = userData['partner_preferences'];
+            final opennessPref = userData['openness_controller'];
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -284,7 +288,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         alignment: Alignment.center,
                         children: [
                           CircleAvatar(
-                            radius: 80,
+                            radius: 100,
                             backgroundImage:
                             avatarImageProvider ?? defaultAvatarImageProvider,
                           ),
@@ -415,14 +419,9 @@ class _ProfileScreenState extends State<ProfileScreen>
 
                   SizedBox(height: 20.0),
 
-
-
-                  // Используйте AnimatedSize для анимации высоты
-                  AnimatedSize(
-                    duration: Duration(seconds: 1), // Уменьшена длительность анимации
-                    curve: Curves.easeInOut, // Добавьте кривую анимации
-                    child: Container(
-                      height: _interestsHeight,
+// Условное отображение списка элементов
+                  if (_showInterestsFields)
+                    Container(
                       child: ListView.builder(
                         shrinkWrap: true,
                         physics: NeverScrollableScrollPhysics(),
@@ -430,37 +429,105 @@ class _ProfileScreenState extends State<ProfileScreen>
                         itemBuilder: (context, index) {
                           final sportInterest = gamesInterestsList[index];
                           final skillLevel = skillLevels[sportInterest] ?? 0.0;
-                          final skillLevelDescription =
-                          _getSkillLevelDescription(skillLevel);
+                          final skillLevelDescription = _getSkillLevelDescription(skillLevel);
 
                           return Column(
                             children: [
                               ListTile(
                                 title: Text(sportInterest),
-                                subtitle:
-                                Text('Уровень навыков: $skillLevelDescription'),
+                                subtitle: Text('Уровень навыков: $skillLevelDescription'),
                               ),
                             ],
                           );
                         },
                       ),
                     ),
-                  ),
-                  // ElevatedButton(
-                  //   onPressed: () {
-                  //     // Измените высоту списка при нажатии кнопки
-                  //     _toggleActivity();
-                  //   },
-                  //   child: Text('Уровень активности'),
-                  //
-                  //
-                  //
-                  // ),
-                  Text(
-                    activity,
-                    style: TextStyle(
-                      fontSize: 18,
+
+                  ExpansionTile(
+                    title: Text(
+                      'Уровень активности',
+                      style: TextStyle(
+                        fontSize: 20, // Установите размер шрифта заголовка
+                        fontWeight: FontWeight.bold, // Жирный стиль для заголовка
+                        color: Colors.blue, // Цвет заголовка
+                      ),
                     ),
+                    children: [
+                      Text(
+                        activity,
+                        style: TextStyle(
+                          fontSize: 18, // Установите размер шрифта текста
+                          color: Colors.black, // Цвет текста
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  ExpansionTile(
+                    title: Text(
+                      'Предпочтения по встречам',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    children: [
+                      Text(
+                        meetingPref,
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  ExpansionTile(
+                    title: Text(
+                      'Открытость к знакомствам',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    children: [
+                      Text(
+                        opennessPref,
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+
+// Продолжайте также с другими ExpansionTile
+
+
+                  ExpansionTile(
+                    title: Text('Предпочтения по общению'),
+                    children: [
+                      Text(
+                        communicationPref,
+                        style: TextStyle(
+                          fontSize: 18,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  ExpansionTile(
+                    title: Text('Предпочтения по партнеру'),
+                    children: [
+                      Text(
+                        partnerPref,
+                        style: TextStyle(
+                          fontSize: 18,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

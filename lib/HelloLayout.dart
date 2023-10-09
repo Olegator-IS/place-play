@@ -57,7 +57,7 @@ class _HelloLayoutState extends State<HelloLayout> {
 
       User? user = FirebaseAuth.instance.currentUser;
 
-      if (user != null) {
+      if (user != null && user.emailVerified) {
         String uid = user.uid;
 
         // Запросите документ пользователя в коллекции "userProfiles"
@@ -101,6 +101,14 @@ class _HelloLayoutState extends State<HelloLayout> {
             },
           );
         }
+      }else{
+        prefs.setBool('isLoggedIn', false);
+        prefs.setString('first_name','');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => LoginPage()),
+        );
       }
     } else {
       DateTime now = DateTime.now();
