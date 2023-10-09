@@ -201,6 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         });
       } catch (e) {
         print('Ошибка при загрузке изображения: $e');
+        print('test');
       }
     }
   }
