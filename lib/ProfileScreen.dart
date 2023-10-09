@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:placeandplay/EmptyScreen.dart';
 import 'package:placeandplay/IntroSlides.dart';
 import 'dart:io';
+import 'dart:ui' as ui;
+
 
 import 'AvatarViewScreen.dart';
 
@@ -207,47 +209,48 @@ class _ProfileScreenState extends State<ProfileScreen>
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          content: Container(
-              ListTile(
-                leading: Icon(Icons.photo),
-                title: Text('Просмотреть аватар'),
-                onTap: () {
-                  if (currentAvatarURL != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => AvatarViewScreen(imageUrl: currentAvatarURL)),
-                    );
-                  }
-                },
-              ),
-              ElevatedButton(
-                onPressed: _isLoading
-                    ? null
-                    : () async {
-                  Navigator.of(context).pop();
-                  await _pickImage(context);
-                },
-                child: _isLoading
-                    ? CircularProgressIndicator() // Анимация при входе
-                    : Text(
-                  'Изменить фотографию',
+        return BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0), // Размытие фона
+          child: AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (currentAvatarURL != null)
+                  Image.network(currentAvatarURL),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Закрыть'),
                 ),
-                style: ElevatedButton.styleFrom(
-                  primary: Colors.blue,
-                  onPrimary: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                ElevatedButton(
+                  onPressed: _isLoading
+                      ? null
+                      : () async {
+                    Navigator.of(context).pop();
+                    await _pickImage(context);
+                  },
+                  child: _isLoading
+                      ? CircularProgressIndicator() // Анимация при входе
+                      : Text('Изменить фотографию'),
+                  style: ElevatedButton.styleFrom(
+                    primary: Colors.blue,
+                    onPrimary: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
-              ),
-
+              ],
+            ),
           ),
         );
       },
     );
   }
+
+
 
 
   String _getSkillLevelDescription(double value) {
@@ -444,7 +447,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             ),
                           ),
                           Text(
-                            'Биография',
+                            'О себе',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
