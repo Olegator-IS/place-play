@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:placeandplay/LoginPage.dart';
-import 'package:placeandplay/RegistrationPage.dart';
+import 'package:placeandplay/WelcomeScreens/LoginPage.dart';
+import 'package:placeandplay/RegistrationScreens/RegistrationPage.dart';
 import 'EmptyScreen.dart';
-import 'HelloLayout.dart';
+import 'WelcomeScreens/HelloLayout.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 void main() async {

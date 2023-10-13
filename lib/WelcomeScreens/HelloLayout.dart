@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:placeandplay/EmptyScreen.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Импорт пакета shared_preferences
 import 'LoginPage.dart';
-import 'ProfileScreen.dart';
-import 'RegistrationProfilePage.dart';
-import 'SuccessScreen.dart'; // Импорт вашего LoginPage или другого экрана после успешной авторизации
+import '../ProfileScreens/ProfileScreen.dart';
+import '../ProfileScreens/RegistrationProfilePage.dart';
+import '../RegistrationScreens/SuccessScreen.dart'; // Импорт вашего LoginPage или другого экрана после успешной авторизации
 
 class HelloLayout extends StatefulWidget {
   @override

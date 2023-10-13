@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:placeandplay/ProfileScreen.dart';
+import 'package:placeandplay/ProfileScreens/ProfileScreen.dart';
 
-import 'EmptyScreen.dart';
-import 'RegistrationProfilePage.dart';
+import '../EmptyScreen.dart';
+import '../ProfileScreens/RegistrationProfilePage.dart';
 
 class SuccessScreen extends StatefulWidget {
   @override
@@ -24,9 +24,12 @@ class _SuccessScreenState extends State<SuccessScreen> {
   }
 
   Future<void> checkEmailVerification() async {
+    var user = this.user;
     if (user != null) {
       await user!.reload();
       user = _auth.currentUser;
+      print(user?.uid);
+      
       isEmailVerified = user!.emailVerified;
 
       if (isEmailVerified) {
@@ -48,12 +51,14 @@ class _SuccessScreenState extends State<SuccessScreen> {
       // Установите verificationComplete в true, чтобы показать анимацию завершения
       setState(() {
         verificationComplete = true;
+        print(isEmailVerified);
       });
 
       String uid = _auth.currentUser.toString();
+
       DocumentSnapshot userProfileSnapshot = await FirebaseFirestore.instance
           .collection('userProfiles')
-          .doc(uid)
+          .doc(user?.uid)
           .get();
       // Подождите несколько секунд для отображения анимации
       await Future.delayed(Duration(seconds: 3));
@@ -101,14 +106,14 @@ class _SuccessScreenState extends State<SuccessScreen> {
                 key: Key('check_circle'), // Уникальный ключ для анимации
               )
                   : CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
               ),
             ),
             SizedBox(height: 20),
             Text(
               verificationComplete
-                  ? 'Вы успешно зарегистрированы! \n Приступаем к созданию профиля...'
-                  : 'Пожалуйста, подтвердите свой email.',
+                  ? 'Ваш EMAIL был успешно подтверждён! \nПриступаем к созданию профиля...'
+                  : 'Сообщение с подтверждением Вашего EMAIL было отправлено на вашу почту',
               style: TextStyle(fontSize: 24),
             ),
             SizedBox(height: 20),

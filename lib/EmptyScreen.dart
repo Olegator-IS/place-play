@@ -6,11 +6,11 @@ class EmptyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Empty Screen'),
+        title: Text('LOH'),
 
       ),
       body: Center(
-        child: Text('This is an empty screen.'),
+        child: Text('Service is not ready yet'),
       ),
     );
   }

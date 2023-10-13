@@ -1,4 +1,5 @@
 import 'package:date_time_picker/date_time_picker.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,7 +12,8 @@ void main() {
 
 class RegistrationProfilePage extends StatefulWidget {
   @override
-  _RegistrationProfilePageState createState() => _RegistrationProfilePageState();
+  _RegistrationProfilePageState createState() =>
+      _RegistrationProfilePageState();
 }
 
 class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
@@ -43,8 +45,6 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
   // final TextEditingController _familyStatusController = TextEditingController();
   // final TextEditingController _opennessController = TextEditingController();
 
-
-
   int _currentStep = 0;
 
   @override
@@ -55,9 +55,14 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
     if (user != null) {
       String uid = user.uid;
 
-      FirebaseFirestore.instance.collection('users').doc(uid).get().then((userDoc) {
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get()
+          .then((userDoc) {
         if (userDoc.exists) {
-          Map<String, dynamic>? userData = userDoc.data() as Map<String, dynamic>?;
+          Map<String, dynamic>? userData =
+              userDoc.data() as Map<String, dynamic>?;
 
           if (userData != null) {
             setState(() {
@@ -72,7 +77,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
 
   Future<List<String>> getGamesInterestsFromFirestore() async {
     final QuerySnapshot querySnapshot =
-    await FirebaseFirestore.instance.collection('listOfSports').get();
+        await FirebaseFirestore.instance.collection('listOfSports').get();
     return querySnapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
       return data['nameRu'] as String? ?? '';
@@ -80,8 +85,9 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
   }
 
   Future<List<String>> getCommunicationPreferences() async {
-    final QuerySnapshot querySnapshot =
-    await FirebaseFirestore.instance.collection('communicationPreferences').get();
+    final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('communicationPreferences')
+        .get();
     return querySnapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
       return data['nameRu'] as String? ?? '';
@@ -90,7 +96,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
 
   Future<List<String>> getMeetingPreferences() async {
     final QuerySnapshot querySnapshot =
-    await FirebaseFirestore.instance.collection('meetingPreferences').get();
+        await FirebaseFirestore.instance.collection('meetingPreferences').get();
     return querySnapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
       return data['nameRu'] as String? ?? '';
@@ -98,8 +104,9 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
   }
 
   Future<List<String>> getActivityPreferences() async {
-    final QuerySnapshot querySnapshot =
-    await FirebaseFirestore.instance.collection('activityPreferences').get();
+    final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('activityPreferences')
+        .get();
     return querySnapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
       return data['nameRu'] as String? ?? '';
@@ -108,7 +115,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
 
   Future<List<String>> getFamilyStatus() async {
     final QuerySnapshot querySnapshot =
-    await FirebaseFirestore.instance.collection('familyStatus').get();
+        await FirebaseFirestore.instance.collection('familyStatus').get();
     return querySnapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
       return data['nameRu'] as String? ?? '';
@@ -116,8 +123,9 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
   }
 
   Future<List<String>> getOpennessPreferences() async {
-    final QuerySnapshot querySnapshot =
-    await FirebaseFirestore.instance.collection('opennessPreferences').get();
+    final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('opennessPreferences')
+        .get();
     return querySnapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
       return data['nameRu'] as String? ?? '';
@@ -126,7 +134,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
 
   Future<List<String>> getPartnerPreferences() async {
     final QuerySnapshot querySnapshot =
-    await FirebaseFirestore.instance.collection('partnerPreferences').get();
+        await FirebaseFirestore.instance.collection('partnerPreferences').get();
     return querySnapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
       return data['nameRu'] as String? ?? '';
@@ -146,6 +154,18 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
       return 'Профессионал';
     }
     return '';
+  }
+
+  // Функция для вычисления возраста
+  int calculateAge(DateTime birthDate) {
+    final currentDate = DateTime.now();
+    int age = currentDate.year - birthDate.year;
+    if (currentDate.month < birthDate.month ||
+        (currentDate.month == birthDate.month &&
+            currentDate.day < birthDate.day)) {
+      age--;
+    }
+    return age;
   }
 
   void _registerProfile() async {
@@ -175,6 +195,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
         'birthday':_birthdayController.text,
       };
 
+
       try {
         await FirebaseFirestore.instance
             .collection('userProfiles')
@@ -202,11 +223,13 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
     });
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Регистрация профиля'),
+        title: Text('Создание профиля'),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -217,7 +240,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                 currentStep: _currentStep,
                 onStepContinue: () {
                   setState(() {
-                    if (_currentStep < 21) {
+                    if (_currentStep < 20) {
                       _currentStep += 1;
                     } else {
                       _currentStep = 0;
@@ -229,10 +252,10 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                   setState(() {
                     if (_currentStep > 0) {
                       _currentStep -= 1;
-                    }else if(_currentStep == 0){
+                    } else if (_currentStep == 0) {
                       _currentStep = 0;
-                    }else {
-                      _currentStep = 21;
+                    } else {
+                      _currentStep = 20;
                     }
                   });
                 },
@@ -255,26 +278,48 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                     ),
                   ),
                   Step(
-                    title: Text('Выберите пол'),
+                    title: Text('Укажите Ваш пол', style: TextStyle(fontSize: 18)),
                     content: Column(
                       children: <Widget>[
-                        RadioListTile<String>(
+                        ListTile(
+                          leading: Radio<String>(
+                            value: 'Мужской',
+                            groupValue: _genderController.text,
+                            onChanged: (String? value) {
+                              setState(() {
+                                _genderController.text = value ?? '';
+                              });
+                            },
+                          ),
                           title: Text('Мужской'),
-                          value: 'Мужской',
-                          groupValue: _genderController.text,
-                          onChanged: (String? value) {
+                          trailing: Icon(Icons.male,
+                              color: _genderController.text == 'Мужской'
+                                  ? Colors.blue
+                                  : Colors.grey),
+                          onTap: () {
                             setState(() {
-                              _genderController.text = value ?? '';
+                              _genderController.text = 'Мужской';
                             });
                           },
                         ),
-                        RadioListTile<String>(
+                        ListTile(
+                          leading: Radio<String>(
+                            value: 'Женский',
+                            groupValue: _genderController.text,
+                            onChanged: (String? value) {
+                              setState(() {
+                                _genderController.text = value ?? '';
+                              });
+                            },
+                          ),
                           title: Text('Женский'),
-                          value: 'Женский',
-                          groupValue: _genderController.text,
-                          onChanged: (String? value) {
+                          trailing: Icon(Icons.female,
+                              color: _genderController.text == 'Женский'
+                                  ? Colors.pink
+                                  : Colors.grey),
+                          onTap: () {
                             setState(() {
-                              _genderController.text = value ?? '';
+                              _genderController.text = 'Женский';
                             });
                           },
                         ),
@@ -282,45 +327,93 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                     ),
                   ),
                   Step(
-                    title: Text('Укажите ваш возраст'),
+                    title: Row(
+                      children: <Widget>[
+                        Text('Укажите дату Вашего рождения'),
+                        IconButton(
+                          icon: Icon(Icons.info_outline,color: Colors.green),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  content: Text('Укажите дату своего рождения,а возраст установится сам :)\n \nПотом если что вы сможете его скрыть в настройках'),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: Text('Понятно'),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                     content: Column(
                       children: <Widget>[
+                        InkWell(
+                          onTap: () async {
+                            final selectedDate =
+                            await showCupertinoModalPopup<DateTime>(
+                              context: context,
+                              builder: (context) {
+                                DateTime currentDate = DateTime.now();
+                                return Container(
+                                  color: Colors.white,
+                                  height: 200,
+                                  child: CupertinoDatePicker(
+                                    use24hFormat: true,
+                                    backgroundColor: Colors.white,
+                                    initialDateTime: currentDate,
+                                    mode: CupertinoDatePickerMode.date,
+                                    maximumYear: currentDate.year,
+                                    minimumYear: 1900,
+                                    onDateTimeChanged: (newDate) {
+                                      currentDate = newDate;
+                                      final selectedDateString =
+                                          "${currentDate.day}.${currentDate.month}.${currentDate.year}";
+                                      _birthdayController.text =
+                                          selectedDateString;
+                                      final age = calculateAge(newDate);
+                                      _ageController.text = age.toString();
+                                    },
+                                  ),
+                                );
+                              },
+                            );
+                            if (selectedDate != null) {
+                              final selectedDateString =
+                                  "${selectedDate.day}.${selectedDate.month}.${selectedDate.year}";
+                              _birthdayController.text = selectedDateString;
+                              final age = calculateAge(selectedDate);
+                              _ageController.text = age.toString();
+                            } else {
+                              print('Выбор даты отменен');
+                            }
+                          },
+                          child: IgnorePointer(
+                            child: TextFormField(
+                              controller: _birthdayController,
+                              decoration: InputDecoration(labelText: 'Дата рождения'),
+                            ),
+                          ),
+                        ),
                         TextFormField(
                           controller: _ageController,
-                          keyboardType: TextInputType.number,
                           decoration: InputDecoration(labelText: 'Возраст'),
-                          validator: (value) {
-                            if (value?.isEmpty ?? true) {
-                              return 'Пожалуйста, введите свой возраст';
-                            }
-                            // Добавьте дополнительные проверки по вашему усмотрению
-                            return null;
-                          },
+                          enabled: false,
                         ),
                       ],
                     ),
                   ),
-                  Step(
-                    title: Text('Укажите дату вашего рождения'),
-                    content: Column(
-                      children: <Widget>[
-                        DateTimePicker(
-                          type: DateTimePickerType.date,
-                          dateMask: 'dd.MM.yyyy',
-                          controller: _birthdayController,
-                          initialDate: DateTime.now(), // Используйте DateTime.now() без toString()
-                          firstDate: DateTime(1900),
-                          lastDate: DateTime.now(),
-                          icon: Icon(Icons.event),
-                          dateLabelText: 'Дата рождения',
-                          onChanged: (val) => setState(() {}),
-                        ),
 
-                      ],
-                    ),
-                  ),
+
                   Step(
-                    title: Text('Укажите ваш город'),
+                    title: Text('Укажите Ваш город'),
                     content: Column(
                       children: <Widget>[
                         TextFormField(
@@ -338,17 +431,52 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                     ),
                   ),
                   Step(
-                    title: Text('Интересующий вид спорта'),
-                    content: Column(
+                    title: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text('Выберите интересующие виды спорта'),
+                        ),
+                        SizedBox(width: 10), // Добавьте отступ между текстом и иконкой
+                        IconButton(
+                          icon: Icon(
+                            Icons.info_outline,
+                            color: Colors.green, // Здесь вы можете указать цвет иконки
+                          ),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: Text('Информация о выборе видов спорта'),
+                                  content: Text('Здесь вы можете выбрать интересующие вас виды спорта.\n\nВыбрав один или несколько интересующих Вас видов спорта,\n'
+                                      'в следующем пункте не забудьте пожалуйста указать Ваши навыки владения выбранными видами спорта.'),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: Text('Хорошо'),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                      content: Column(
                       children: <Widget>[
                         FutureBuilder<List<String>>(
                           future: getGamesInterestsFromFirestore(),
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
                               return CircularProgressIndicator();
                             } else if (snapshot.hasError) {
                               return Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            } else if (!snapshot.hasData ||
+                                snapshot.data!.isEmpty) {
                               return Text('Нет данных об интересах');
                             } else {
                               final gamesInterests = snapshot.data!;
@@ -356,14 +484,17 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                 children: <Widget>[
                                   DropdownButtonFormField<String>(
                                     value: _selectedGameInterest,
-                                    items: gamesInterests.map((String interest) {
+                                    items:
+                                        gamesInterests.map((String interest) {
                                       return DropdownMenuItem<String>(
                                         value: interest,
                                         child: Text(interest),
                                       );
                                     }).toList(),
                                     onChanged: (String? value) {
-                                      if (value != null && !_selectedGameInterests.contains(value)) {
+                                      if (value != null &&
+                                          !_selectedGameInterests
+                                              .contains(value)) {
                                         setState(() {
                                           _selectedGameInterest = value;
                                           _selectedGameInterests.add(value);
@@ -371,15 +502,19 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                         });
                                       }
                                     },
-                                    decoration: InputDecoration(labelText: 'Вид спорта'),
+                                    decoration: InputDecoration(
+                                        labelText: 'Вид спорта'),
                                   ),
                                   ElevatedButton(
                                     onPressed: () {
                                       setState(() {
                                         if (_selectedGameInterest != null &&
-                                            !_selectedGameInterests.contains(_selectedGameInterest)) {
-                                          _selectedGameInterests.add(_selectedGameInterest!);
-                                          _skillLevels[_selectedGameInterest!] = 0.0;
+                                            !_selectedGameInterests.contains(
+                                                _selectedGameInterest)) {
+                                          _selectedGameInterests
+                                              .add(_selectedGameInterest!);
+                                          _skillLevels[_selectedGameInterest!] =
+                                              0.0;
                                           _selectedGameInterest = null;
                                         }
                                       });
@@ -388,7 +523,8 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                         ? 'Добавить'
                                         : 'Добавить еще один вид спорта'),
                                   ),
-                                  Text('Выбранные интересы: ${_selectedGameInterests.join(", ")}'),
+                                  Text(
+                                      'Выбранные виды спорта: ${_selectedGameInterests.join(", ")}'),
                                   ElevatedButton(
                                     onPressed: _removeLastInterest,
                                     child: Text('Удалить последний вид спорта'),
@@ -402,13 +538,14 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                     ),
                   ),
                   Step(
-                    title: Text('Уровень навыков'),
+                    title: Text('Укажите уровень владения выбранных видов спорта'),
                     content: Column(
                       children: <Widget>[
                         for (String sportInterest in _selectedGameInterests)
                           Column(
                             children: <Widget>[
-                              Text('Уровень навыков для $sportInterest: ${_getSkillLevelDescription(_skillLevels[sportInterest] ?? 0.0)}'),
+                              Text(
+                                  'Уровень навыков для $sportInterest: ${_getSkillLevelDescription(_skillLevels[sportInterest] ?? 0.0)}'),
                               Slider(
                                 value: _skillLevels[sportInterest] ?? 0.0,
                                 onChanged: (newValue) {
@@ -419,7 +556,9 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                 min: 0.0,
                                 max: 100.0,
                                 divisions: 100,
-                                label: _skillLevels[sportInterest]?.toStringAsFixed(2) ?? '0.0',
+                                label: _skillLevels[sportInterest]
+                                        ?.toStringAsFixed(2) ??
+                                    '0.0',
                               ),
                             ],
                           ),
@@ -427,31 +566,67 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                     ),
                   ),
                   Step(
-                    title: Text('Предпочтительный стиль общения'),
+                    title: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text('Предпочтительный стиль общения'),
+                        ),
+                        SizedBox(width: 10),
+                        IconButton(
+                          icon: Icon(
+                            Icons.info_outline,
+                            color: Colors.blue,
+                          ),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  content: Text('Будьте честны,укажите ваш тип общения.Это поможет другим людям понять Вас'),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: Text('Хорошо'),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                     content: Column(
                       children: <Widget>[
                         FutureBuilder<List<String>>(
                           future: getCommunicationPreferences(),
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
                               return CircularProgressIndicator();
                             } else if (snapshot.hasError) {
                               return Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            } else if (!snapshot.hasData ||
+                                snapshot.data!.isEmpty) {
                               return Text('Нет данных об стилях общения');
                             } else {
                               final communicationPreferences = snapshot.data!;
                               return Column(
                                 children: <Widget>[
                                   Column(
-                                    children: communicationPreferences.map((String preference) {
+                                    children: communicationPreferences
+                                        .map((String preference) {
                                       return RadioListTile<String>(
                                         title: Text(preference),
                                         value: preference,
-                                        groupValue: _selectedCommunicationPreferences,
+                                        groupValue:
+                                            _selectedCommunicationPreferences,
                                         onChanged: (String? value) {
                                           setState(() {
-                                            _selectedCommunicationPreferences = value;
+                                            _selectedCommunicationPreferences =
+                                                value;
                                           });
                                         },
                                       );
@@ -465,25 +640,59 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                       ],
                     ),
                   ),
-                  Step(
-                    title: Text('Предпочтительное время активности'),
+        Step(
+          title: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text('Предпочтительное время активности'),
+              ),
+              SizedBox(width: 10),
+              IconButton(
+                icon: Icon(
+                  Icons.info_outline,
+                  color: Colors.blue,
+                ),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        content: Text('Выбрав нужное для Вас время,Вы будете своевременно получать информацию о начале мероприятий'),
+                        actions: <Widget>[
+                          TextButton(
+                            child: Text('Хорошо'),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+                    ],
+          ),
                     content: Column(
                       children: <Widget>[
                         FutureBuilder<List<String>>(
                           future: getMeetingPreferences(),
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
                               return CircularProgressIndicator();
                             } else if (snapshot.hasError) {
                               return Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            } else if (!snapshot.hasData ||
+                                snapshot.data!.isEmpty) {
                               return Text('Нет данных о времени активности');
                             } else {
                               final meetingPreferences = snapshot.data!;
                               return Column(
                                 children: <Widget>[
                                   Column(
-                                    children: meetingPreferences.map((String preference) {
+                                    children: meetingPreferences
+                                        .map((String preference) {
                                       return RadioListTile<String>(
                                         title: Text(preference),
                                         value: preference,
@@ -506,32 +715,36 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                   ),
 
                   Step(
-                    title: Text('Ваш уровень активности'),
+                    title: Text('Уровень Вашей активности'),
                     content: Column(
                       children: <Widget>[
                         FutureBuilder<List<String>>(
                           future: getActivityPreferences(),
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
                               return CircularProgressIndicator();
                             } else if (snapshot.hasError) {
                               return Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            } else if (!snapshot.hasData ||
+                                snapshot.data!.isEmpty) {
                               return Text('Нет данных об уровне активности');
                             } else {
                               final activityPreferences = snapshot.data!;
                               return Column(
                                 children: <Widget>[
                                   Column(
-                                    children: activityPreferences.map((String preference) {
+                                    children: activityPreferences
+                                        .map((String preference) {
                                       return RadioListTile<String>(
                                         title: Text(preference),
                                         value: preference,
-                                        groupValue: _selectedActivityPreferences,
+                                        groupValue:
+                                            _selectedActivityPreferences,
                                         onChanged: (String? value) {
                                           setState(() {
-                                            _selectedActivityPreferences = value;
-
+                                            _selectedActivityPreferences =
+                                                value;
                                           });
                                         },
                                       );
@@ -553,18 +766,21 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                         FutureBuilder<List<String>>(
                           future: getFamilyStatus(),
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
                               return CircularProgressIndicator();
                             } else if (snapshot.hasError) {
                               return Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            } else if (!snapshot.hasData ||
+                                snapshot.data!.isEmpty) {
                               return Text('Нет данных о семейном положении');
                             } else {
                               final familyStatusPreferences = snapshot.data!;
                               return Column(
                                 children: <Widget>[
                                   Column(
-                                    children: familyStatusPreferences.map((String preference) {
+                                    children: familyStatusPreferences
+                                        .map((String preference) {
                                       return RadioListTile<String>(
                                         title: Text(preference),
                                         value: preference,
@@ -593,25 +809,30 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                         FutureBuilder<List<String>>(
                           future: getOpennessPreferences(),
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
                               return CircularProgressIndicator();
                             } else if (snapshot.hasError) {
                               return Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            } else if (!snapshot.hasData ||
+                                snapshot.data!.isEmpty) {
                               return Text('Нет данных об уровне открытости');
                             } else {
                               final opennessPreferences = snapshot.data!;
                               return Column(
                                 children: <Widget>[
                                   Column(
-                                    children: opennessPreferences.map((String preference) {
+                                    children: opennessPreferences
+                                        .map((String preference) {
                                       return RadioListTile<String>(
                                         title: Text(preference),
                                         value: preference,
-                                        groupValue: _selectedOpennessPreferences,
+                                        groupValue:
+                                            _selectedOpennessPreferences,
                                         onChanged: (String? value) {
                                           setState(() {
-                                            _selectedOpennessPreferences = value;
+                                            _selectedOpennessPreferences =
+                                                value;
                                           });
                                         },
                                       );
@@ -633,18 +854,21 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                         FutureBuilder<List<String>>(
                           future: getPartnerPreferences(),
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
                               return CircularProgressIndicator();
                             } else if (snapshot.hasError) {
                               return Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            } else if (!snapshot.hasData ||
+                                snapshot.data!.isEmpty) {
                               return Text('Нет данных о группе общения');
                             } else {
                               final partnerPreferences = snapshot.data!;
                               return Column(
                                 children: <Widget>[
                                   Column(
-                                    children: partnerPreferences.map((String preference) {
+                                    children: partnerPreferences
+                                        .map((String preference) {
                                       return RadioListTile<String>(
                                         title: Text(preference),
                                         value: preference,
@@ -652,7 +876,6 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                         onChanged: (String? value) {
                                           setState(() {
                                             _selectedPartnerPreferences = value;
-
                                           });
                                         },
                                       );
@@ -679,9 +902,6 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                       ],
                     ),
                   ),
-
-
-
 
                   // Добавьте другие этапы регистрации сюда
                   // ...
