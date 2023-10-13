@@ -2,16 +2,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:placeandplay/EmptyScreen.dart';
-import 'package:placeandplay/RegistrationProfilePage.dart';
+import 'package:placeandplay/ProfileScreens/RegistrationProfilePage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 
-import 'ForgotPasswordScreen.dart';
-import 'ProfileScreen.dart';
-import 'RegistrationPage.dart';
+import '../RegistrationScreens/ForgotPasswordScreen.dart';
+import '../ProfileScreens/ProfileScreen.dart';
+import '../RegistrationScreens/RegistrationPage.dart';
 
 class LoginPage extends StatefulWidget {
   @override
