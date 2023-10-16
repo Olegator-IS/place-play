@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:image_picker/image_picker.dart';
 import 'package:placeandplay/EmptyScreen.dart';
+import 'package:placeandplay/ProfileScreens/EditProfileScreen.dart';
 import 'package:placeandplay/WelcomeScreens/IntroSlides.dart';
 import 'package:placeandplay/WelcomeScreens/LoginPage.dart';
 import 'dart:io';
@@ -169,24 +170,24 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _toggleInterests() {
     if (userDataSnapshot != null) {
       final gamesInterestsString = userDataSnapshot!['games_interests'];
-      final cleanedGamesInterestsString =
-      gamesInterestsString.replaceAll('  ', ' ');
+      final cleanedGamesInterestsString = gamesInterestsString.replaceAll('  ', ' ');
       final gamesInterestsList = cleanedGamesInterestsString.split(', ');
 
       if (gamesInterestsList.isNotEmpty) {
-        setState(() {
-          _showInterestsFields = !_showInterestsFields;
-          if (_showInterestsFields) {
-            // Вычислите высоту на основе количества элементов и высоты каждого элемента
-            final numberOfInterests = gamesInterestsList.length;
-            print('test');
-            print(numberOfInterests);
-            final itemHeight = 73.0; // Предположим высоту каждого элемента
-            _interestsHeight = numberOfInterests * itemHeight;
-          } else {
-            _interestsHeight = 0.0;
-          }
-        });
+        final newShowInterestsFields = !_showInterestsFields;
+        if (newShowInterestsFields != _showInterestsFields) {
+          setState(() {
+            _showInterestsFields = newShowInterestsFields;
+            if (_showInterestsFields) {
+              // Вычислите высоту на основе количества элементов и высоты каждого элемента
+              final numberOfInterests = gamesInterestsList.length;
+              final itemHeight = 73.0; // Предположим высоту каждого элемента
+              _interestsHeight = numberOfInterests * itemHeight;
+            } else {
+              _interestsHeight = 0.0;
+            }
+          });
+        }
       }
     }
   }
@@ -590,11 +591,41 @@ class _ProfileScreenState extends State<ProfileScreen>
                             final skillLevel = skillLevels[sportInterest] ?? 0.0;
                             final skillLevelDescription = _getSkillLevelDescription(skillLevel);
 
+                            Color tileColor;
+                            if (skillLevel >= 75.0) {
+                              tileColor = Colors.green;
+                            } else if (skillLevel >= 50.0) {
+                              tileColor = Colors.blue;
+                            } else {
+                              tileColor = Colors.red;
+                            }
+
                             return Column(
                               children: [
                                 ListTile(
                                   title: Text(sportInterest),
                                   subtitle: Text('Уровень навыков: $skillLevelDescription'),
+                                ),
+                                Stack(
+                                  children: [
+                                    Container(
+                                      height: 10, // Высота полоски прогресса
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[300], // Цвет фона полоски
+                                        borderRadius: BorderRadius.circular(5), // Закругленные углы
+                                      ),
+                                    ),
+                                    FractionallySizedBox(
+                                      widthFactor: skillLevel / 100.0, // Фактор ширины, основанный на уровне навыков
+                                      child: Container(
+                                        height: 10, // Высота полоски прогресса
+                                        decoration: BoxDecoration(
+                                          color: tileColor, // Цвет заполняющейся части
+                                          borderRadius: BorderRadius.circular(5), // Закругленные углы
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             );
@@ -793,7 +824,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       context,
       MaterialPageRoute(
         // builder: (context) => EmptyScreen(userId: widget.userId),
-        builder: (context) => EmptyScreen(),
+        builder: (context) => EditProfileScreen(userId: widget.userId),
 
       ),
     );
