@@ -608,9 +608,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                             Color tileColor;
                             if (skillLevel >= 75.0) {
                               tileColor = Colors.green;
-                            } else if (skillLevel >= 50.0) {
+                            } else if (skillLevel <= 75.0&&skillLevel>=50.0) {
                               tileColor = Colors.blue;
-                            } else {
+                            }else if (skillLevel < 50.0&&skillLevel>30.0) {
+                              tileColor = Colors.yellowAccent;
+                            }
+                            else if (skillLevel < 30.0&&skillLevel>10.0) {
+                              tileColor = Colors.deepOrangeAccent;
+                            }
+                            else {
                               tileColor = Colors.red;
                             }
 
