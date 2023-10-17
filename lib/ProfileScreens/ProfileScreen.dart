@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
@@ -10,6 +11,8 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 
+
+
 import 'AvatarViewScreen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -19,6 +22,7 @@ class ProfileScreen extends StatefulWidget {
 
   @override
   _ProfileScreenState createState() => _ProfileScreenState();
+
 }
 
 class ProfileTitle extends StatelessWidget {
@@ -46,8 +50,10 @@ class ProfileTitle extends StatelessWidget {
 
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
-  int _currentIndex = 0;
+  final audioCache = AudioCache();
+  final audioFilePath = 'audio/swipe.mp3'; // Путь к вашему аудиофайлу в папке assets
 
+  int _currentIndex = 0;
   DocumentSnapshot? userDataSnapshot;
   String? avatarURL;
   String? defaultAvatarURL;
@@ -351,6 +357,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Future<void> _loadUserData() async {
     try {
+      _playSound();
       // Выполните запрос к базе данных или получите данные заново
       final snapshot = await FirebaseFirestore.instance.collection('userProfiles').doc(widget.userId).get();
 
@@ -376,6 +383,13 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Future<void> _refreshData() async {
     await _loadUserData();
+
+
+
+  }
+
+  _playSound() async {
+    await audioCache.play(audioFilePath);
   }
 
   @override
@@ -635,23 +649,33 @@ class _ProfileScreenState extends State<ProfileScreen>
 
                     ExpansionTile(
                       leading: Icon(
-                        Icons.local_activity, // Выберите нужную иконку
-                        color: Colors.blue, // Цвет иконки
+                        Icons.local_activity,
+                        color: Colors.blue,
                       ),
                       title: Text(
                         'Уровень активности',
                         style: TextStyle(
-                          fontSize: 20, // Установите размер шрифта заголовка
-                          fontWeight: FontWeight.bold, // Жирный стиль для заголовка
-                          color: Colors.blue, // Цвет заголовка
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
                         ),
                       ),
                       children: [
-                        Text(
-                          activity,
-                          style: TextStyle(
-                            fontSize: 18, // Установите размер шрифта текста
-                            color: Colors.black, // Цвет текста
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(height: 8.0),
+                              Text(
+                                activity,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -671,11 +695,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                       ),
                       children: [
+                        SizedBox(height: 8.0),
                         Text(
                           meetingPref,
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.black,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
@@ -695,11 +721,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                       ),
                       children: [
+                        SizedBox(height: 8.0),
                         Text(
                           opennessPref,
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.black,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
@@ -721,11 +749,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                       ),
                       children: [
+                        SizedBox(height: 8.0),
                         Text(
                           communicationPref,
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.black,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
@@ -745,11 +775,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                       ),
                       children: [
+                        SizedBox(height: 8.0),
                         Text(
                           partnerPref,
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.black,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
 
