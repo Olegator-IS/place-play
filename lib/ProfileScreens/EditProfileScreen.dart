@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:date_time_picker/date_time_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -89,16 +91,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               _genderController.text = userData['gender'] ?? '';
               _birthdayController.text = userData['birthday'] ?? '';
               _ageController.text = userData['age'] ?? '';
+              final skillLevels = userData['skill_levels'] as Map<String, dynamic>?;
+              if (skillLevels != null) {
+                _skillLevels = skillLevels.map((key, value) => MapEntry(key.trim(), value.toDouble()));
+                print(skillLevels);
+              } else {
+                // Устанавливаем уровень навыков по умолчанию (например, 50.0) для всех видов спорта
+                _selectedGameInterests.forEach((interest) {
+                  _skillLevels[interest] = 50.0;
+                });
+              }
+              // final gamesInterestsString = userData['games_interests'];
+              // final _selectedGameInterests = gamesInterestsString.split(', ');
+              // final selectedSports = _selectedGameInterests.join(', ');
+
               final gamesInterestsString = userData['games_interests'];
-              final _selectedGameInterests = gamesInterestsString.split(', ');
-              final selectedSports = _selectedGameInterests.join(', ');
-              print(_selectedGameInterests);
+              _selectedGameInterests = gamesInterestsString.split(',');
+              _selectedGameInterests.forEach((interest) {
+                if (!_selectedGameInterests.contains(interest)) {
+                  _selectedGameInterests.add(interest);
+                  print('loooooh');
+                }
+              });
             });
           }
         }
       });
-    }else{
-      // такого не может быть впринципе чтобы во время редактирования профиля,пользователь не был найден :)
+    } else {
+      // такого не может быть в принципе, чтобы во время редактирования профиля, пользователь не был найден :)
     }
   }
 
@@ -109,6 +129,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final data = doc.data() as Map<String, dynamic>;
       return data['nameRu'] as String? ?? '';
     }).toList();
+  }
+
+
+  Color _generateRandomColor() {
+    final Random random = Random();
+    final int red = random.nextInt(256);
+    final int green = random.nextInt(256);
+    final int blue = random.nextInt(256);
+    return Color.fromARGB(255, red, green, blue);
   }
 
   Future<List<String>> getCommunicationPreferences() async {
@@ -183,6 +212,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return '';
   }
 
+
+
+  Map<String, Color> interestColors = {
+
+    'Пейнтбол': Colors.blue,
+    'Сноубординг': Colors.red,
+    'Бильярд': Colors.green,
+    // Добавьте другие интересы и соответствующие цвета
+  };
+
+
+
   // Функция для вычисления возраста
   int calculateAge(DateTime birthDate) {
     final currentDate = DateTime.now();
@@ -195,7 +236,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return age;
   }
 
-  void _registerProfile() async {
+  void _editProfile() async {
     User? user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
@@ -244,8 +285,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void _removeLastInterest() {
     setState(() {
       if (_selectedGameInterests.isNotEmpty) {
+        print(_selectedGameInterests);
         final removedInterest = _selectedGameInterests.removeLast();
         _skillLevels.remove(removedInterest);
+      }else{
+        print('');
+        print(_selectedGameInterests);
       }
     });
   }
@@ -579,77 +624,95 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   },
                                 ),
                               ],
-
                             ),
-                  FutureBuilder<List<String>>(
-                    future: getGamesInterestsFromFirestore(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return CircularProgressIndicator();
-                      } else if (snapshot.hasError) {
-                        return Text('Ошибка загрузки');
-                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return Text('Нет данных об интересах');
-                      } else {
-                        final gamesInterests = snapshot.data!;
-                        return Column(
-                          children: <Widget>[
-                            DropdownButtonFormField<String>(
-                              value: _selectedGameInterest,
-                              items: _selectedGameInterests.map((String interest) {
-                                return DropdownMenuItem<String>(
-                                  value: interest,
-                                  child: Text(interest),
-                                );
-                              }).toList(),
-                              onChanged: (String? value) {
-                                if (value != null &&
-                                    !_selectedGameInterests.contains(value)) {
-                                  setState(() {
-                                    _selectedGameInterest = value;
-                                    _selectedGameInterests.add(value);
-                                    _selectedGameInterest = null;
-                                  });
+                            FutureBuilder<List<String>>(
+                              future: getGamesInterestsFromFirestore(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return CircularProgressIndicator();
+                                } else if (snapshot.hasError) {
+                                  return Text('Ошибка загрузки');
+                                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                                  return Text('Нет данных об интересах');
+                                } else {
+                                  final gamesInterests = snapshot.data!;
+                                  return Column(
+                                    children: <Widget>[
+                                      DropdownButtonFormField<String>(
+                                        value: _selectedGameInterest,
+                                        items: gamesInterests.map((String interest) {
+                                          return DropdownMenuItem<String>(
+                                            value: interest,
+                                            child: Text(interest),
+                                          );
+                                        }).toList(),
+                                        onChanged: (String? value) {
+                                          if (value != null && !_selectedGameInterests.contains(value)) {
+                                            setState(() {
+                                              _selectedGameInterest = value;
+                                              _selectedGameInterests.add(value);
+                                              _selectedGameInterest = null;
+                                            });
+                                          }
+                                        },
+                                        decoration: InputDecoration(
+                                          labelText: 'Вид спорта',
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            if (_selectedGameInterest != null &&
+                                                !_selectedGameInterests.contains(_selectedGameInterest)) {
+                                              _selectedGameInterests.add(_selectedGameInterest!);
+                                              _skillLevels[_selectedGameInterest!] = 0.0;
+                                              _selectedGameInterest = null;
+                                            }
+                                          });
+                                        },
+                                        child: Text(_selectedGameInterests.isEmpty
+                                            ? 'Добавить'
+                                            : 'Добавить еще один вид спорта'),
+                                      ),
+                                      Text(
+                                        'Выбранные виды спорта:',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Wrap(
+                                        spacing: 8.0,
+                                        children: _selectedGameInterests.map((interest) {
+                                          if (!interestColors.containsKey(interest)) {
+                                            interestColors[interest] = _generateRandomColor();
+                                          }
+                                          Color color = interestColors[interest] ?? Colors.grey;
+                                          return Chip(
+                                            backgroundColor: color,
+                                            label: Text(interest),
+                                            onDeleted: () {
+                                              setState(() {
+                                                _selectedGameInterests.remove(interest);
+                                                print('Интерес $interest удален. _selectedGameInterests: $_selectedGameInterests');
+                                              });
+                                            },
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
+                                  );
                                 }
                               },
-                              decoration: InputDecoration(
-                                  labelText: 'Вид спорта'),
                             ),
-                            ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  if (_selectedGameInterest != null &&
-                                      !_selectedGameInterests.contains(
-                                          _selectedGameInterest)) {
-                                    _selectedGameInterests.add(_selectedGameInterest!);
-                                    _skillLevels[_selectedGameInterest!] =
-                                    0.0;
-                                    _selectedGameInterest = null;
-                                  }
-                                });
-                              },
-                              child: Text(_selectedGameInterests.isEmpty
-                                  ? 'Добавить'
-                                  : 'Добавить еще один вид спорта'),
-                            ),
-                            Text(
-                                'Выбранные виды спорта: ${_selectedGameInterests.join(", ")}'),
-                            ElevatedButton(
-                              onPressed: _removeLastInterest,
-                              child: Text('Удалить последний вид спорта'),
-                            ),
+
+
                           ],
-                        );
-                      }
-                    },
+                        ),
+                      ),
+                    ],
                   ),
-                  ],
                 ),
               ),
-              ],
-            ),
-    ),
-    ),
             ),
 
             // Добавьте другие вкладки здесь, если необходимо

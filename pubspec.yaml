@@ -40,10 +40,12 @@ dependencies:
   carousel_slider: ^4.0.0
   firebase_storage: ^11.2.6
   image_picker: ^0.8.4+4
-  flutter_facebook_auth: ^6.0.2
+  flutter_facebook_auth: ^5.0.11
   date_time_picker: ^2.0.0
   photo_view: ^0.14.0
   table_calendar: ^3.0.8
+  audioplayers: ^0.20.1
+
 
 
 
@@ -72,6 +74,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/audio/
   fonts:
     - family: Patua One
       fonts:
