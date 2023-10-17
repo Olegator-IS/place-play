@@ -5,6 +5,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+
+
 
 import 'ProfileScreen.dart';
 
@@ -31,6 +36,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final GlobalKey<FormState> _formKeyTab2 = GlobalKey<FormState>();
   final GlobalKey<FormState> _formKeyTab3 = GlobalKey<FormState>();
   final GlobalKey<FormState> _formKeyTab4 = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKeyTab5 = GlobalKey<FormState>();
 
 
   final PageController _pageController = PageController(initialPage: 0);
@@ -91,14 +97,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               _genderController.text = userData['gender'] ?? '';
               _birthdayController.text = userData['birthday'] ?? '';
               _ageController.text = userData['age'] ?? '';
+              _selectedCommunicationPreferences = userData['communication_preferences'] ?? '';
+              _selectedMeetingPreferences = userData['meeting_preferences'] ?? '';
+              _selectedActivityPreferences = userData['activity'] ?? '';
+              _selectedFamilyStatus = userData['family_status'] ?? '';
+              _selectedOpennessPreferences = userData['openness_controller'] ?? '';
+              _selectedPartnerPreferences = userData['partner_preferences'] ?? '';
+              _bioController.text = userData['bio'] ?? '';
+              _locationController.text = userData['location'] ?? '';
               final skillLevels = userData['skill_levels'] as Map<String, dynamic>?;
               if (skillLevels != null) {
                 _skillLevels = skillLevels.map((key, value) => MapEntry(key.trim(), value.toDouble()));
-                print(skillLevels);
+                print('Навыки $skillLevels');
               } else {
                 // Устанавливаем уровень навыков по умолчанию (например, 50.0) для всех видов спорта
                 _selectedGameInterests.forEach((interest) {
                   _skillLevels[interest] = 50.0;
+                  print('444444');
                 });
               }
               // final gamesInterestsString = userData['games_interests'];
@@ -106,7 +121,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               // final selectedSports = _selectedGameInterests.join(', ');
 
               final gamesInterestsString = userData['games_interests'];
-              _selectedGameInterests = gamesInterestsString.split(',');
+              _selectedGameInterests = gamesInterestsString.split(', ');
               _selectedGameInterests.forEach((interest) {
                 if (!_selectedGameInterests.contains(interest)) {
                   _selectedGameInterests.add(interest);
@@ -121,6 +136,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       // такого не может быть в принципе, чтобы во время редактирования профиля, пользователь не был найден :)
     }
   }
+
+  void showStyledToast() {
+    Fluttertoast.showToast(
+        msg: "This is Center Short Toast",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
+    );
+  }
+
+
 
   Future<List<String>> getGamesInterestsFromFirestore() async {
     final QuerySnapshot querySnapshot =
@@ -246,20 +275,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'uid': uid,
         'first_name': _firstNameController.text,
         'last_name': _lastNameController.text,
-        'games_interests': _selectedGameInterests.join(', '),
-        'skill_levels': _skillLevels,
-        'location': _locationController.text,
+        // 'games_interests': _selectedGameInterests.join(', '),
+        // 'skill_levels': _skillLevels,
+        // 'location': _locationController.text,
         // 'availability': _availabilityController.text,
-        'meeting_preferences': _selectedMeetingPreferences,
-        'communication_preferences': _selectedCommunicationPreferences,
-        'bio': _bioController.text,
-        'partner_preferences': _selectedPartnerPreferences,
+        // 'meeting_preferences': _selectedMeetingPreferences,
+        // 'communication_preferences': _selectedCommunicationPreferences,
+        // 'bio': _bioController.text,
+        // 'partner_preferences': _selectedPartnerPreferences,
         'gender': _genderController.text,
         'age': _ageController.text,
-        'photos': _photosController.text.split(','),
-        'activity': _selectedActivityPreferences,
-        'family_status': _selectedFamilyStatus,
-        'openness_controller': _selectedOpennessPreferences,
+        // 'photos': _photosController.text.split(','),
+        // 'activity': _selectedActivityPreferences,
+        // 'family_status': _selectedFamilyStatus,
+        // 'openness_controller': _selectedOpennessPreferences,
         'birthday': _birthdayController.text,
       };
 
@@ -268,12 +297,76 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         await FirebaseFirestore.instance
             .collection('userProfiles')
             .doc(uid)
-            .set(userProfileData);
+            .update(userProfileData);
 
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.setString('first_name', _firstNameController.text);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => ProfileScreen(userId: uid)),
         );
+      } catch (e) {
+        print('Ошибка при сохранении профиля: $e');
+      }
+    } else {
+      print('Пользователь не аутентифицирован');
+    }
+  }
+
+
+  void _editInterests() async {
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      String uid = user.uid;
+
+      Map<String, dynamic> userProfileData = {
+        'uid': uid,
+        'games_interests': _selectedGameInterests.join(', '),
+      };
+
+
+      try {
+        await FirebaseFirestore.instance
+            .collection('userProfiles')
+            .doc(uid)
+            .update(userProfileData);
+
+        // Navigator.pushReplacement(
+        //   context,
+        //   MaterialPageRoute(builder: (context) => ProfileScreen(userId: uid)),
+        // );
+      } catch (e) {
+        print('Ошибка при сохранении профиля: $e');
+      }
+    } else {
+      print('Пользователь не аутентифицирован');
+    }
+  }
+
+
+  void _editSkills() async {
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      String uid = user.uid;
+
+      Map<String, dynamic> userProfileData = {
+        'uid': uid,
+        'skill_levels': _skillLevels,
+      };
+
+
+      try {
+        await FirebaseFirestore.instance
+            .collection('userProfiles')
+            .doc(uid)
+            .update(userProfileData);
+
+        // Navigator.pushReplacement(
+        //   context,
+        //   MaterialPageRoute(builder: (context) => ProfileScreen(userId: uid)),
+        // );
       } catch (e) {
         print('Ошибка при сохранении профиля: $e');
       }
@@ -300,7 +393,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4, // Здесь задайте количество ваших вкладок
+      length: 5, // Здесь задайте количество ваших вкладок
       child: Scaffold(
         appBar: AppBar(
           title: Text('Изменение профиля'),
@@ -319,6 +412,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Text('Список спортивных интересов'),
+                  ),
+                ),
+                Tab(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Text('Спортивные навыки'),
                   ),
                 ),
                 Tab(
@@ -499,13 +598,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     context: context,
                                     builder: (context) {
                                       DateTime currentDate = DateTime.now();
+                                      String initialDateString = _birthdayController.text;
+                                      final inputFormat = DateFormat('dd.MM.yyyy'); // Определите формат ввода
+                                      DateTime initialDate = inputFormat.parse(initialDateString);
                                       return Container(
                                         color: Colors.white,
                                         height: 200,
                                         child: CupertinoDatePicker(
                                           use24hFormat: true,
                                           backgroundColor: Colors.white,
-                                          initialDateTime: currentDate,
+                                          initialDateTime: initialDate ?? currentDate, // Установите начальную дату
                                           mode: CupertinoDatePickerMode.date,
                                           maximumYear: currentDate.year,
                                           minimumYear: 1900,
@@ -552,7 +654,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       // Кнопка "Сохранить"
                       ElevatedButton(
                         onPressed: () {
-                          // Здесь добавьте логику для сохранения изменений в профиле
+                          _editProfile();
                           if (_formKeyTab1.currentState!.validate()) {
                             // Все данные валидны, можно сохранить
                           }
@@ -699,6 +801,47 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                           );
                                         }).toList(),
                                       ),
+                                      SizedBox(height: 30.0),
+                                      ElevatedButton(
+                                        onPressed: () {
+
+                                          if (_formKeyTab2.currentState!.validate()) {
+                                            _editInterests();
+
+                                            Future.delayed(Duration(seconds: 2), ()
+                                            {
+                                              DefaultTabController.of(context).animateTo(2);
+                                            });
+
+                                            showDialog(
+                                              context: context,
+                                              builder: (BuildContext context) {
+                                                return AlertDialog(
+                                                  title: Text('Сохранено!'),
+                                                  content: Text('Изменения были сохранены,переходим на следующую вкладку!.'),
+                                                  actions: <Widget>[
+                                                    TextButton(
+                                                      onPressed: () {
+                                                        Navigator.of(context).pop();
+                                                      },
+                                                      child: Text('Понятно'),
+                                                    ),
+                                                  ],
+                                                );
+                                              },
+                                            );
+                                          }
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          primary: Colors.red, // Задайте цвет кнопки
+                                          onPrimary: Colors.white, // Задайте цвет текста на кнопке
+                                          minimumSize: Size(200, 80), // Задайте минимальный размер кнопки (ширина x высота)
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10), // Задайте скругление углов кнопки
+                                          ),
+                                        ),
+                                        child: Text('Сохранить и перейти к следующей вкладке'),
+                                      ),
                                     ],
                                   );
                                 }
@@ -715,7 +858,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ),
 
-            // Добавьте другие вкладки здесь, если необходимо
+
             SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -723,8 +866,61 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   key: _formKeyTab3,
                   child: Column(
                     children: <Widget>[
-                      // Добавьте поля для редактирования фотографий
-                      // ...
+
+                      for (String sportInterest in _selectedGameInterests)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              'Уровень навыков для $sportInterest: ${_getSkillLevelDescription(_skillLevels[sportInterest.trim()] ?? 0.0)}',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Slider(
+                              value: _skillLevels[sportInterest.trim()] ?? 0.0,
+                              onChanged: (newValue) {
+                                print('Уровень навыков для $sportInterest: ${_getSkillLevelDescription(_skillLevels[sportInterest.trim()] ?? 0.0)}');
+                                print('test $_skillLevels[sportInterest.trim()]');
+                                setState(() {
+                                  _skillLevels[sportInterest.trim()] = newValue;
+                                });
+                              },
+                              min: 0.0,
+                              max: 100.0,
+                              divisions: 100,
+                              label: _skillLevels[sportInterest.trim()]?.toString() ?? '0.0',
+                            ),
+                          ],
+                        ),
+                      ElevatedButton(
+                        onPressed: () {
+
+                          if (_formKeyTab3.currentState!.validate()) {
+                            _editSkills();
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: Text('Применено'),
+                                  content: Text('Изменения были применены.\nP.S простите за убогий интерфейс,пока только так умею :('),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Text('Закрыть'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+
+                          }
+                        },
+                        child: Text('Сохранить изменения'),
+                      ),
                     ],
                   ),
                 ),
@@ -738,8 +934,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   key: _formKeyTab4,
                   child: Column(
                     children: <Widget>[
-                      // Добавьте поля для редактирования фотографий
-                      // ...
+                  Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'SOON',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                        ],
+                      ),
+                        ],
+                  ),
+                ),
+              ),
+            ),
+            SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKeyTab5,
+                  child: Column(
+                    children: <Widget>[
+                      Text(
+                        'Durov call me -> +998(99)8888931',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
