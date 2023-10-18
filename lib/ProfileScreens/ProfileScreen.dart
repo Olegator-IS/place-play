@@ -13,6 +13,7 @@ import 'dart:ui' as ui;
 
 
 
+import '../MapScreens/MapsPage.dart';
 import 'AvatarViewScreen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -391,6 +392,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   _playSound() async {
     await audioCache.play(audioFilePath);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -844,11 +846,31 @@ class _ProfileScreenState extends State<ProfileScreen>
         ],
         currentIndex: _currentIndex, // Устанавливайте индекс текущей вкладки
         onTap: (int index) {
-          // Обработчик нажатия на вкладку
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+          if (index == 0) {
+            // Пользователь выбрал вкладку "Карта", перенаправляем его на пустую страницу
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => ProfileScreen(userId: widget.userId),
+              ),
+            );
+          } else if(index == 1){
+          Navigator.of(context).push(
+            MaterialPageRoute(
+                builder: (context) => MapsPage(userId: widget.userId),
+              ),
+            );
+          }else if(index == 2){
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => EmptyScreen(),
+              ),
+            );
+          }
+            // Для других вкладок обновляем индекс
+            setState(() {
+              _currentIndex = index;
+            });
+          }
       ),
 
 
