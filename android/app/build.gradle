@@ -61,6 +61,8 @@ dependencies {
     implementation 'com.google.firebase:firebase-auth'
     implementation 'com.google.firebase:firebase-firestore'
     implementation 'com.facebook.android:facebook-android-sdk:[8,9)'
+    implementation 'com.google.android.gms:play-services-maps:18.0.0'
+
     // ... другие зависимости Firebase
 
     // Добавьте зависимость для мультидекса, если нужно
