@@ -46,6 +46,9 @@ dependencies:
   table_calendar: ^3.0.8
   audioplayers: ^0.20.1
   fluttertoast: ^8.2.2
+  google_maps_flutter: ^2.0.5
+  location: ^4.0.1
+  geocoding: ^2.0.0
 
 
 
