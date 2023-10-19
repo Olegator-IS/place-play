@@ -840,7 +840,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.star),
-            label: 'Избранное',
+            label: 'События',
           ),
 
         ],

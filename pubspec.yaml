@@ -79,6 +79,7 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/audio/
+    - assets/map/map_style.json
   fonts:
     - family: Patua One
       fonts:
