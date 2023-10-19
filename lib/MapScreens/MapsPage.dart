@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -16,20 +15,19 @@ class MapsPage extends StatefulWidget {
   MapsPage({required this.userId});
 
   @override
-  _MapsPageState createState() => _MapsPageState();
+  MapsPageState createState() => MapsPageState();
 }
-
 
 class LegendOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment: Alignment.bottomLeft, // Отображаем легенду в нижнем левом углу
+      alignment: Alignment.bottomLeft,
       child: Container(
-        margin: EdgeInsets.fromLTRB(6.0, 0.0, 6.0, 100.0), // Добавляем отступ снизу
+        margin: EdgeInsets.fromLTRB(6.0, 0.0, 6.0, 100.0),
         padding: EdgeInsets.all(8.0),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.8), // Делаем фон более прозрачным
+          color: Colors.white.withOpacity(0.8),
           border: Border.all(color: Colors.black),
           borderRadius: BorderRadius.circular(8.0),
         ),
@@ -38,16 +36,14 @@ class LegendOverlay extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             LegendItem(color: Colors.blue, label: 'Метки с синим цветом - бильярд'),
-            Divider(height: 8.0, color: Colors.black), // Добавляем разделитель
+            Divider(height: 8.0, color: Colors.black),
             LegendItem(color: Colors.red, label: 'Метки с красным цветом - настольный теннис'),
-            // Добавьте другие LegendItem и разделители по необходимости
           ],
         ),
       ),
     );
   }
 }
-
 
 class LegendItem extends StatelessWidget {
   final Color color;
@@ -73,7 +69,7 @@ class LegendItem extends StatelessWidget {
   }
 }
 
-class _MapsPageState extends State<MapsPage> {
+class MapsPageState extends State<MapsPage> {
   DocumentSnapshot? userDataSnapshot;
   String? firstName;
   int _currentIndex = 1;
@@ -87,9 +83,6 @@ class _MapsPageState extends State<MapsPage> {
     _fetchLocationsFromFirestore();
     _fetchUserData();
   }
-
-
-
 
   Future<void> _fetchLocationsFromFirestore() async {
     Location location = Location();
@@ -116,8 +109,9 @@ class _MapsPageState extends State<MapsPage> {
     }
 
     _locationData = await location.getLocation();
+
     FirebaseFirestore.instance.collection('locations').get().then((querySnapshot) {
-      querySnapshot.docs.forEach((doc) {
+      querySnapshot.docs.forEach((doc) async {
         var markerColor;
         var data = doc.data();
         var name = data['name'];
@@ -125,7 +119,6 @@ class _MapsPageState extends State<MapsPage> {
         var address = data['address'];
         var phoneNumber = data['phoneNumber'];
         var type = data['type_ru'];
-
 
         if (type == 'Бильярд') {
           markerColor =
@@ -137,45 +130,153 @@ class _MapsPageState extends State<MapsPage> {
           markerColor =
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet);
         }
+        final bool eventExists = await checkEventAvailability(name);
 
+        CollectionReference locations = FirebaseFirestore.instance.collection('locations');
+        CollectionReference events = FirebaseFirestore.instance.collection('events');
 
-        // Создайте метку на карте
+        String nameToCheck = name;
+
+        locations.where('name', isEqualTo: nameToCheck).get().then((querySnapshot) {
+          if (querySnapshot.docs.isNotEmpty) {
+            events.where('name', isEqualTo: nameToCheck).get().then((eventQuerySnapshot) {
+              if (eventQuerySnapshot.docs.isNotEmpty) {
+                print('Олег лох');
+              }
+            }).catchError((error) {
+              print('Ошибка при выполнении запроса к коллекции events: $error');
+            });
+          }
+        }).catchError((error) {
+          print('Ошибка при выполнении запроса к коллекции locations: $error');
+        });
+
         var marker = Marker(
           markerId: MarkerId(doc.id),
           position: LatLng(coordinates.latitude, coordinates.longitude),
           icon: markerColor,
-          infoWindow: InfoWindow(anchor: Offset(1.0, 1.0),
-            title: name, // Отображаем название объекта
-            snippet: address, // Отображаем адрес
+          infoWindow: InfoWindow(
+            anchor: Offset(1.0, 1.0),
+            title: name,
+            snippet: address,
           ),
-          onTap: () {
+          onTap: () async {
             showDialog(
               context: context,
               builder: (context) {
                 return AlertDialog(
-                  title: Text(name), // Отображаем название объекта
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Адрес: $address'),
-                      // Отображаем адрес
-                      Text('Телефон: $phoneNumber'),
-                      // Отображаем номер телефона
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  EventCreationForm(organizer: firstName.toString(),
-                                      activityType: type,userId: widget.userId,type: type,address:address,name:name),
+                  title: Text(name),
+                  content: FutureBuilder<bool>(
+                    future: checkEventAvailability(name),
+                    builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return CircularProgressIndicator();
+                      } else if (snapshot.hasError) {
+                        return Text('Произошла ошибка: ${snapshot.error}');
+                      } else {
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Доступные ивенты на сегодня'),
+                            FutureBuilder<DocumentSnapshot>(
+                              future: FirebaseFirestore.instance.collection('events').doc(name).get(),
+                              builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> eventSnapshot) {
+                                if (eventSnapshot.connectionState == ConnectionState.waiting) {
+                                  return CircularProgressIndicator();
+                                } else if (eventSnapshot.hasError) {
+                                  return Text('Произошла ошибка: ${eventSnapshot.error}');
+                                } else if (eventSnapshot.hasData) {
+                                  final eventData = eventSnapshot.data!.data();
+                                  if (eventData == null || eventData is! Map<String, dynamic>) {
+                                    return Text('Событие не найдено');
+                                  }
+
+                                  final eventsList = eventData['events'] as List<dynamic>;
+
+
+
+
+                                  // Создайте список виджетов для отображения данных о событиях
+                                  List<Widget> eventWidgets = [];
+
+                                  eventsList.forEach((event) {
+                                    final type = event['type'];
+                                    final firstName = event['first_name'];
+                                    final dateEvent = event['date_event'];
+                                    final startTimeEvent = event['start_time_event'];
+                                    final organizer = event['organizer'];
+
+                                    // Создайте виджет для отдельного события и добавьте его в список
+
+                                    eventWidgets.add(
+                                      Column(
+                                        children: [
+                                          SizedBox(height: 16.0),
+                                          Row(
+                                            children: [
+                                              Text('Тип события:'),
+                                              SizedBox(width: 8),
+                                              Text(type),
+                                            ],
+                                          ),
+                                          Row(
+                                            children: [
+                                              Text('Имя организатора:'),
+                                              SizedBox(width: 8),
+                                              Text(organizer),
+                                            ],
+                                          ),
+                                          Row(
+                                            children: [
+                                              Text('Дата события:'),
+                                              SizedBox(width: 8),
+                                              Text(dateEvent),
+                                            ],
+                                          ),
+                                          Row(
+                                            children: [
+                                              Text('Время начала:'),
+                                              SizedBox(width: 8),
+                                              Text(startTimeEvent),
+                                            ],
+                                          ),
+                                          SizedBox(height: 16.0),
+                                          // Другие данные о событии
+                                        ],
+                                      ),
+                                    );
+                                  });
+
+                                  // Отобразите все виджеты событий в столбце
+                                  return Column(
+                                    children: eventWidgets,
+                                  );
+                                } else {
+                                  return Text('Событие не найдено');
+                                }
+                              },
                             ),
-                          );
-                        },
-                        child: Text(
-                            'Создать ивент'), // Пример кнопки "Создать ивент"
-                      ),
-                    ],
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => EventCreationForm(
+                                      organizer: firstName.toString(),
+                                      activityType: type,
+                                      userId: widget.userId,
+                                      type: type,
+                                      address: address,
+                                      name: name,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Text('Создать событие'),
+                            ),
+                          ],
+                        );
+                      }
+                    },
                   ),
                 );
               },
@@ -183,24 +284,48 @@ class _MapsPageState extends State<MapsPage> {
           },
         );
 
+
         setState(() {
           _markers.add(marker);
         });
       });
     });
+  }
 
+  Future<bool> checkEventAvailability(String nameToCheck) async {
+    try {
+      final locations = FirebaseFirestore.instance.collection('locations');
+      final events = FirebaseFirestore.instance.collection('events');
+
+      final locationQuerySnapshot = await locations.where('name', isEqualTo: nameToCheck).get();
+
+      if (locationQuerySnapshot.docs.isNotEmpty) {
+        // Получите документ, который содержит информацию о событиях
+        final eventDocument = await events.doc('Black Pool').get();
+
+        if (eventDocument.exists) {
+          // Проверьте поле 'events' на наличие объектов с полем 'name'
+          final eventsList = eventDocument['events'] as List<dynamic>;
+
+          final hasName = eventsList.any((event) => event['name'] == nameToCheck);
+
+          return hasName;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      print('Ошибка при выполнении запроса: $error');
+      return false;
+    }
   }
 
 
-  Future<void> _fetchUserData()  async {
-    print('Запустилась хуйня');
+  Future<void> _fetchUserData() async {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
-      final userSnapshot = await FirebaseFirestore.instance
-          .collection('userProfiles')
-          .doc(user.uid)
-          .get();
+      final userSnapshot = await FirebaseFirestore.instance.collection('userProfiles').doc(user.uid).get();
 
       if (userSnapshot.exists) {
         final userData = userSnapshot.data() as Map<String, dynamic>;
@@ -208,9 +333,9 @@ class _MapsPageState extends State<MapsPage> {
 
         if (userFirstName != null) {
           setState(() {
-            firstName = userFirstName; // Устанавливайте имя пользователя в переменной состояния
+            firstName = userFirstName;
           });
-        }else{
+        } else {
           print('loooooooh');
         }
       }
@@ -229,7 +354,6 @@ class _MapsPageState extends State<MapsPage> {
       final results = geocodeData['results'] as List<dynamic>;
       if (results.isNotEmpty) {
         final placeId = results[0]['place_id'];
-
         await getPlaceDetails(placeId);
       } else {
         print('Местоположение не найдено.');
@@ -240,7 +364,6 @@ class _MapsPageState extends State<MapsPage> {
   }
 
   Future<void> getPlaceDetails(String placeId) async {
-    final apiKey = 'AIzaSyC5PFLVPT3FuPCUYKEcbccwGFaP11r-wUA';
     final url = Uri.parse(
         'https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&fields=name,formatted_address,formatted_phone_number&key=$apiKey');
 
@@ -252,7 +375,6 @@ class _MapsPageState extends State<MapsPage> {
       if (data['status'] == 'OK') {
         final result = data['result'];
 
-        // Проверить, есть ли 'name' в ответе
         if (result.containsKey('name')) {
           final name = result['name'];
           print('Название: $name');
@@ -260,7 +382,6 @@ class _MapsPageState extends State<MapsPage> {
           print('Название отсутствует в ответе');
         }
 
-        // Проверить, есть ли 'formatted_address' в ответе
         if (result.containsKey('formatted_address')) {
           final address = result['formatted_address'];
           print('Адрес: $address');
@@ -268,7 +389,6 @@ class _MapsPageState extends State<MapsPage> {
           print('Адрес отсутствует в ответе');
         }
 
-        // Проверить, есть ли 'formatted_phone_number' в ответе
         if (result.containsKey('formatted_phone_number')) {
           final phoneNumber = result['formatted_phone_number'];
           print('Телефон: $phoneNumber');
@@ -276,11 +396,9 @@ class _MapsPageState extends State<MapsPage> {
           print('Телефон отсутствует в ответе');
         }
       } else {
-        // Обработка ошибки от API
         print('Ошибка от Google Places API: ${data['error_message']}');
       }
     } else {
-      // Обработка ошибки запроса
       print('Ошибка при запросе: ${response.reasonPhrase}');
     }
   }
@@ -289,32 +407,28 @@ class _MapsPageState extends State<MapsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
-          children: [
-            GoogleMap(
-        onMapCreated: (GoogleMapController controller) {
-          // Чтение JSON-файла со стилями карты
-          DefaultAssetBundle.of(context).loadString('assets/map/map_style.json').then((style) {
-            controller.setMapStyle(style);
-          });
-          _controller = controller;
-        },
-
-        mapType: MapType.normal,
-        initialCameraPosition: CameraPosition(
-          target: LatLng(41.3111, 69.2797),
-          zoom: 17.0,
-        ),
-        myLocationButtonEnabled: true,
-        markers: _markers,
-
-        onTap: (LatLng position) {
-          print("Нажато по координатам: ${position.latitude}, ${position.longitude}");
-          _getPlaceId(position);
-        },
-
-      ),
-            LegendOverlay(),
-          ]
+        children: [
+          GoogleMap(
+            onMapCreated: (GoogleMapController controller) {
+              DefaultAssetBundle.of(context).loadString('assets/map/map_style.json').then((style) {
+                controller.setMapStyle(style);
+              });
+              _controller = controller;
+            },
+            mapType: MapType.normal,
+            initialCameraPosition: CameraPosition(
+              target: LatLng(41.3111, 69.2797),
+              zoom: 17.0,
+            ),
+            myLocationButtonEnabled: true,
+            markers: _markers,
+            onTap: (LatLng position) {
+              print("Нажато по координатам: ${position.latitude}, ${position.longitude}");
+              _getPlaceId(position);
+            },
+          ),
+          LegendOverlay(),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: [
@@ -334,30 +448,28 @@ class _MapsPageState extends State<MapsPage> {
         currentIndex: _currentIndex,
         onTap: (int index) {
           if (index == 0) {
-            // Пользователь выбрал вкладку "Карта", перенаправляем его на пустую страницу
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => ProfileScreen(userId: widget.userId),
               ),
             );
-          } else if(index == 1){
+          } else if (index == 1) {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => MapsPage(userId: widget.userId),
               ),
             );
-          }else if(index == 2){
+          } else if (index == 2) {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => EmptyScreen(),
               ),
             );
           }
-          // Для других вкладок обновляем индекс
           setState(() {
             _currentIndex = index;
           });
-        }
+        },
       ),
     );
   }
