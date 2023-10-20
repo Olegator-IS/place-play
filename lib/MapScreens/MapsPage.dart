@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -82,6 +84,24 @@ class MapsPageState extends State<MapsPage> {
     super.initState();
     _fetchLocationsFromFirestore();
     _fetchUserData();
+    _refreshData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('events').doc().get();
+      if (snapshot.exists) {
+        setState(() {
+          userDataSnapshot = snapshot;
+        });
+      }
+    } catch (e) {
+      print('Ошибка при загрузке данных: $e');
+    }
+  }
+
+  Future<void> _refreshData() async {
+    await _loadUserData();
   }
 
   Future<void> _fetchLocationsFromFirestore() async {
@@ -151,133 +171,142 @@ class MapsPageState extends State<MapsPage> {
           print('Ошибка при выполнении запроса к коллекции locations: $error');
         });
 
-        var marker = Marker(
+
+        final  marker = Marker(
           markerId: MarkerId(doc.id),
           position: LatLng(coordinates.latitude, coordinates.longitude),
           icon: markerColor,
           infoWindow: InfoWindow(
-            anchor: Offset(1.0, 1.0),
             title: name,
             snippet: address,
           ),
+          visible: true,
           onTap: () async {
             showDialog(
               context: context,
               builder: (context) {
                 return AlertDialog(
                   title: Text(name),
-                  content: FutureBuilder<bool>(
-                    future: checkEventAvailability(name),
-                    builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return CircularProgressIndicator();
-                      } else if (snapshot.hasError) {
-                        return Text('Произошла ошибка: ${snapshot.error}');
-                      } else {
-                        return Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Доступные ивенты на сегодня'),
-                            FutureBuilder<DocumentSnapshot>(
-                              future: FirebaseFirestore.instance.collection('events').doc(name).get(),
-                              builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> eventSnapshot) {
-                                if (eventSnapshot.connectionState == ConnectionState.waiting) {
-                                  return CircularProgressIndicator();
-                                } else if (eventSnapshot.hasError) {
-                                  return Text('Произошла ошибка: ${eventSnapshot.error}');
-                                } else if (eventSnapshot.hasData) {
-                                  final eventData = eventSnapshot.data!.data();
-                                  if (eventData == null || eventData is! Map<String, dynamic>) {
+                content: Container(
+                color: Colors.white.withOpacity(0.5),
+                  child: Scrollbar(
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                    child: FutureBuilder<bool>(
+                      future: checkEventAvailability(name),
+                      builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return CircularProgressIndicator();
+                        } else if (snapshot.hasError) {
+                          return Text('Произошла ошибка: ${snapshot.error}');
+                        } else {
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(height: 16.0),
+                              Text('Доступные ивенты на сегодня',
+                                style: TextStyle(color: Colors.white, fontSize: 18)),
+                              FutureBuilder<DocumentSnapshot>(
+                                future: FirebaseFirestore.instance.collection('events').doc(name).get(),
+                                builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> eventSnapshot) {
+                                  if (eventSnapshot.connectionState == ConnectionState.waiting) {
+                                    return CircularProgressIndicator();
+                                  } else if (eventSnapshot.hasError) {
+                                    return Text('Произошла ошибка: ${eventSnapshot.error}');
+                                  } else if (eventSnapshot.hasData) {
+                                    final eventData = eventSnapshot.data!.data();
+                                    if (eventData == null || eventData is! Map<String, dynamic>) {
+                                      return Text('Событие не найдено');
+                                    }
+
+                                    final eventsList = eventData['events'] as List<dynamic>;
+
+                                    // Создайте список виджетов для отображения данных о событиях
+                                    List<Widget> eventWidgets = [];
+
+                                    eventsList.forEach((event) {
+                                      final type = event['type'];
+                                      final firstName = event['first_name'];
+                                      final dateEvent = event['date_event'];
+                                      final startTimeEvent = event['start_time_event'];
+                                      final organizer = event['organizer'];
+
+                                      // Создайте виджет для отдельного события и добавьте его в список
+                                      eventWidgets.add(
+                                        Column(
+                                          children: [
+                                            SizedBox(height: 16.0),
+                                            Row(
+                                              children: [
+                                                Text('Тип события:'),
+                                                SizedBox(width: 8),
+                                                Text(type),
+                                              ],
+                                            ),
+                                            Row(
+                                              children: [
+                                                Text('Имя организатора:'),
+                                                SizedBox(width: 8),
+                                                Text(organizer),
+                                              ],
+                                            ),
+                                            Row(
+                                              children: [
+                                                Text('Дата события:'),
+                                                SizedBox(width: 8),
+                                                Text(dateEvent),
+                                              ],
+                                            ),
+                                            Row(
+                                              children: [
+                                                Text('Время начала:'),
+                                                SizedBox(width: 8),
+                                                Text(startTimeEvent),
+                                              ],
+                                            ),
+                                            SizedBox(height: 16.0),
+                                            // Другие данные о событии
+                                          ],
+                                        ),
+                                      );
+                                    });
+
+                                    // Отобразите все виджеты событий в столбце
+                                    return Column(
+                                      children: eventWidgets,
+                                    );
+                                  } else {
                                     return Text('Событие не найдено');
                                   }
-
-                                  final eventsList = eventData['events'] as List<dynamic>;
-
-
-
-
-                                  // Создайте список виджетов для отображения данных о событиях
-                                  List<Widget> eventWidgets = [];
-
-                                  eventsList.forEach((event) {
-                                    final type = event['type'];
-                                    final firstName = event['first_name'];
-                                    final dateEvent = event['date_event'];
-                                    final startTimeEvent = event['start_time_event'];
-                                    final organizer = event['organizer'];
-
-                                    // Создайте виджет для отдельного события и добавьте его в список
-
-                                    eventWidgets.add(
-                                      Column(
-                                        children: [
-                                          SizedBox(height: 16.0),
-                                          Row(
-                                            children: [
-                                              Text('Тип события:'),
-                                              SizedBox(width: 8),
-                                              Text(type),
-                                            ],
-                                          ),
-                                          Row(
-                                            children: [
-                                              Text('Имя организатора:'),
-                                              SizedBox(width: 8),
-                                              Text(organizer),
-                                            ],
-                                          ),
-                                          Row(
-                                            children: [
-                                              Text('Дата события:'),
-                                              SizedBox(width: 8),
-                                              Text(dateEvent),
-                                            ],
-                                          ),
-                                          Row(
-                                            children: [
-                                              Text('Время начала:'),
-                                              SizedBox(width: 8),
-                                              Text(startTimeEvent),
-                                            ],
-                                          ),
-                                          SizedBox(height: 16.0),
-                                          // Другие данные о событии
-                                        ],
+                                },
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => EventCreationForm(
+                                          organizer: firstName.toString(),
+                                          activityType: type,
+                                          userId: widget.userId,
+                                          type: type,
+                                          address: address,
+                                          name: name,
+                                          phoneNumber: phoneNumber
                                       ),
-                                    );
-                                  });
-
-                                  // Отобразите все виджеты событий в столбце
-                                  return Column(
-                                    children: eventWidgets,
-                                  );
-                                } else {
-                                  return Text('Событие не найдено');
-                                }
-                              },
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => EventCreationForm(
-                                      organizer: firstName.toString(),
-                                      activityType: type,
-                                      userId: widget.userId,
-                                      type: type,
-                                      address: address,
-                                      name: name,
                                     ),
-                                  ),
-                                );
-                              },
-                              child: Text('Создать событие'),
-                            ),
-                          ],
-                        );
-                      }
-                    },
+                                  );
+                                },
+                                child: Text('Создать событие'),
+                              ),
+                            ],
+                          );
+                        }
+                      },
+                    ),
+                    ),
                   ),
+                ),
                 );
               },
             );
