@@ -10,8 +10,9 @@ class EventCreationForm extends StatefulWidget {
   final String type;
   final String address;
   final String name;
+  final String phoneNumber;
 
-  EventCreationForm({required this.organizer, required this.activityType,required this.userId,required this.type,required this.address,required this.name});
+  EventCreationForm({required this.organizer, required this.activityType,required this.userId,required this.type,required this.address,required this.name,required this.phoneNumber});
 
   @override
   _EventCreationFormState createState() => _EventCreationFormState();
@@ -50,6 +51,7 @@ class _EventCreationFormState extends State<EventCreationForm> {
   late TimeOfDay startTime;
   late TimeOfDay endTime;
   bool isBooked = false;
+  DocumentSnapshot? userDataSnapshot;
 
   final TextEditingController _eventDateController = TextEditingController();
   final TextEditingController _eventTimeBeginController = TextEditingController();
@@ -61,8 +63,27 @@ class _EventCreationFormState extends State<EventCreationForm> {
     selectedDate = DateTime.now();
     startTime = TimeOfDay.now();
     endTime = TimeOfDay.now();
+    _refreshData();
+  }
+  Future<void> _loadUserData() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('events').doc().get();
+      if (snapshot.exists) {
+        setState(() {
+          userDataSnapshot = snapshot;
+        });
+      }
+    } catch (e) {
+      print('Ошибка при загрузке данных: $e');
+    }
   }
 
+  Future<void> _refreshData() async {
+    await _loadUserData();
+
+
+
+  }
   void _showEventCreationDialog() {
     showDialog(
       context: context,
@@ -74,6 +95,7 @@ class _EventCreationFormState extends State<EventCreationForm> {
           type: 'Тип события',
           address: 'Адрес',
           name: 'Название заведения',
+          phoneNumber:'Номер телефона',
         );
       },
     );
@@ -339,7 +361,35 @@ class _EventCreationFormState extends State<EventCreationForm> {
             _eventDateController.clear();
             _eventTimeBeginController.clear();
             _eventTimeEndController.clear();
-            Navigator.of(context).pop();
+            Navigator.of(context).pop(); // Закрыть диалог
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: Text('Успешно', style: TextStyle(color: Colors.red, fontSize: 24)), // Заголовок красного цвета
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            'Ваша игра в ${widget.activityType} состоится в ${startTime.hour}:${startTime.minute}\n'
+                                'По адресу:\n${widget.address}\nB заведении:\n${widget.name}\nПросим прибыть на месте чуточку раньше.\nУдачной игры!', // Текст поздравления
+                            style: TextStyle(fontSize: 18),
+                          ),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: Text('OK', style: TextStyle(color: Colors.blue, fontSize: 20)), // Кнопка OK с синим текстом
+                        ),
+                      ],
+                    );
+                  },
+                );
+
+          _refreshData();
 
             // Дальше вы можете отправить JSON данные на сервер или сохранить их локально
           },
