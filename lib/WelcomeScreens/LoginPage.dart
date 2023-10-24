@@ -225,7 +225,7 @@ class _LoginPageState extends State<LoginPage> {
               builder: (BuildContext context) {
                 return AlertDialog(
                   title: Text('Профиль вашего пользователя не существует'),
-                  content: Text('Начинаем регистрацию информации о пользователе.'),
+                  content: Text('Начинается создание Вашего профиля.'),
                   actions: [
                     TextButton(
                       onPressed: () {
@@ -235,7 +235,7 @@ class _LoginPageState extends State<LoginPage> {
                           MaterialPageRoute(builder: (context) => RegistrationProfilePage()),
                         );
                       },
-                      child: Text('Продолжить'),
+                      child: Text('Создать профиль'),
                     ),
                   ],
                 );

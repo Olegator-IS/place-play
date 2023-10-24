@@ -421,8 +421,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               print(profileCompletionNotification);
               final firstName = userData['first_name'] as String;
               final lastName = userData['last_name'] as String;
-              final age = userData['age'] as String;
-              final bio = userData['bio'] as String;
+              final age = userData['age'] as String ?? 'Не указан';
+              final bio = userData['bio'] ?? '';
               final gender = userData['gender'] ?? 'Не определенный';
               final city = userData['location'] as String? ?? 'Не указан';
               final gamesInterestsString = userData['games_interests'];

@@ -1,49 +1,34 @@
-import 'package:date_time_picker/date_time_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import '../References/References.dart';
 import 'ProfileScreen.dart';
+import 'package:intl/intl.dart';
+
 
 void main() {
-  runApp(MaterialApp(home: RegistrationProfilePage()));
+  runApp(const MaterialApp(home: RegistrationProfilePage()));
 }
 
 class RegistrationProfilePage extends StatefulWidget {
+  const RegistrationProfilePage({super.key});
+
   @override
   _RegistrationProfilePageState createState() =>
       _RegistrationProfilePageState();
 }
 
 class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
-  final PageController _pageController = PageController(initialPage: 0);
-  int _currentPage = 0;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   List<String> _selectedGameInterests = [];
   String? _selectedGameInterest;
-  String? _selectedCommunicationPreferences;
-  String? _selectedMeetingPreferences;
-  String? _selectedActivityPreferences;
-  String? _selectedFamilyStatus;
-  String? _selectedOpennessPreferences;
-  String? _selectedPartnerPreferences;
   Map<String, double> _skillLevels = {};
   final TextEditingController _locationController = TextEditingController();
-  // final TextEditingController _availabilityController = TextEditingController();
-  // final TextEditingController _meetingPreferencesController = TextEditingController();
-  // final TextEditingController _communicationPreferencesController = TextEditingController();
-  final TextEditingController _bioController = TextEditingController();
-  // final TextEditingController _partnerPreferencesController = TextEditingController();
   final TextEditingController _genderController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
   final TextEditingController _birthdayController = TextEditingController();
-  final TextEditingController _photosController = TextEditingController();
-  // final TextEditingController _activityController = TextEditingController();
-  // final TextEditingController _familyStatusController = TextEditingController();
-  // final TextEditingController _opennessController = TextEditingController();
 
   int _currentStep = 0;
 
@@ -54,7 +39,6 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
 
     if (user != null) {
       String uid = user.uid;
-
       FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
@@ -62,7 +46,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
           .then((userDoc) {
         if (userDoc.exists) {
           Map<String, dynamic>? userData =
-              userDoc.data() as Map<String, dynamic>?;
+              userDoc.data();
 
           if (userData != null) {
             setState(() {
@@ -73,72 +57,6 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
         }
       });
     }
-  }
-
-  Future<List<String>> getGamesInterestsFromFirestore() async {
-    final QuerySnapshot querySnapshot =
-        await FirebaseFirestore.instance.collection('listOfSports').get();
-    return querySnapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return data['nameRu'] as String? ?? '';
-    }).toList();
-  }
-
-  Future<List<String>> getCommunicationPreferences() async {
-    final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-        .collection('communicationPreferences')
-        .get();
-    return querySnapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return data['nameRu'] as String? ?? '';
-    }).toList();
-  }
-
-  Future<List<String>> getMeetingPreferences() async {
-    final QuerySnapshot querySnapshot =
-        await FirebaseFirestore.instance.collection('meetingPreferences').get();
-    return querySnapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return data['nameRu'] as String? ?? '';
-    }).toList();
-  }
-
-  Future<List<String>> getActivityPreferences() async {
-    final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-        .collection('activityPreferences')
-        .get();
-    return querySnapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return data['nameRu'] as String? ?? '';
-    }).toList();
-  }
-
-  Future<List<String>> getFamilyStatus() async {
-    final QuerySnapshot querySnapshot =
-        await FirebaseFirestore.instance.collection('familyStatus').get();
-    return querySnapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return data['nameRu'] as String? ?? '';
-    }).toList();
-  }
-
-  Future<List<String>> getOpennessPreferences() async {
-    final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-        .collection('opennessPreferences')
-        .get();
-    return querySnapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return data['nameRu'] as String? ?? '';
-    }).toList();
-  }
-
-  Future<List<String>> getPartnerPreferences() async {
-    final QuerySnapshot querySnapshot =
-        await FirebaseFirestore.instance.collection('partnerPreferences').get();
-    return querySnapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return data['nameRu'] as String? ?? '';
-    }).toList();
   }
 
   String _getSkillLevelDescription(double value) {
@@ -169,11 +87,11 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
   }
 
   void _registerProfile() async {
+    BuildContext currentContext = context;
     User? user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
       String uid = user.uid;
-
       Map<String, dynamic> userProfileData = {
         'uid': uid,
         'first_name': _firstNameController.text,
@@ -181,38 +99,40 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
         'games_interests': _selectedGameInterests.join(', '),
         'skill_levels': _skillLevels,
         'location': _locationController.text,
-        // 'availability': _availabilityController.text,
-        'meeting_preferences': _selectedMeetingPreferences,
-        'communication_preferences': _selectedCommunicationPreferences,
-        'bio': _bioController.text,
-        'partner_preferences': _selectedPartnerPreferences,
-        'gender': _genderController.text,
         'age': _ageController.text,
-        'photos': _photosController.text.split(','),
-        'activity':_selectedActivityPreferences,
-        'family_status':_selectedFamilyStatus,
-        'openness_controller':_selectedOpennessPreferences,
         'birthday':_birthdayController.text,
+        'gender':_genderController.text,
       };
-
 
       try {
         await FirebaseFirestore.instance
             .collection('userProfiles')
             .doc(uid)
             .set(userProfileData);
-
         Navigator.pushReplacement(
-          context,
+          currentContext,
           MaterialPageRoute(builder: (context) => ProfileScreen(userId: uid)),
         );
       } catch (e) {
-        print('Ошибка при сохранении профиля: $e');
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка при сохранении профиля: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     } else {
-      print('Пользователь не аутентифицирован');
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        const SnackBar(
+          content: Text('Пользователь не аутентифицирован'),
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
   }
+
+
+
 
   void _removeLastInterest() {
     setState(() {
@@ -229,15 +149,17 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Создание профиля'),
+        title: const Text('Создание профиля'),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
+      body: ListView (
             children: <Widget>[
               Stepper(
                 currentStep: _currentStep,
+                onStepTapped: (step) {
+                  setState(() {
+                    _currentStep = step;
+                  });
+                },
                 onStepContinue: () {
                   setState(() {
                     if (_currentStep < 20) {
@@ -248,7 +170,6 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                   });
                 },
                 onStepCancel: () {
-                  print(_currentStep);
                   setState(() {
                     if (_currentStep > 0) {
                       _currentStep -= 1;
@@ -261,24 +182,36 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                 },
                 steps: <Step>[
                   Step(
-                    title: Text('Имя и Фамилия'),
+                    title: const Text('Имя и Фамилия'),
                     content: Column(
                       children: <Widget>[
                         TextFormField(
                           controller: _firstNameController,
-                          decoration: InputDecoration(labelText: 'Имя'),
+                          decoration: const InputDecoration(labelText: 'Имя'),
                           readOnly: true,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Пожалуйста, укажите ваше имя';
+                            }
+                            return null;
+                          },
                         ),
                         TextFormField(
                           controller: _lastNameController,
-                          decoration: InputDecoration(labelText: 'Фамилия'),
+                          decoration: const InputDecoration(labelText: 'Фамилия'),
                           readOnly: true,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Пожалуйста, укажите вашу фамилия';
+                            }
+                            return null;
+                          },
                         ),
                       ],
                     ),
                   ),
                   Step(
-                    title: Text('Укажите Ваш пол', style: TextStyle(fontSize: 18)),
+                    title: const Text('Укажите Ваш пол', style: TextStyle(fontSize: 18)),
                     content: Column(
                       children: <Widget>[
                         ListTile(
@@ -291,7 +224,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                               });
                             },
                           ),
-                          title: Text('Мужской'),
+                          title: const Text('Мужской'),
                           trailing: Icon(Icons.male,
                               color: _genderController.text == 'Мужской'
                                   ? Colors.blue
@@ -312,7 +245,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                               });
                             },
                           ),
-                          title: Text('Женский'),
+                          title: const Text('Женский'),
                           trailing: Icon(Icons.female,
                               color: _genderController.text == 'Женский'
                                   ? Colors.pink
@@ -329,18 +262,18 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                   Step(
                     title: Row(
                       children: <Widget>[
-                        Text('Укажите дату Вашего рождения'),
+                        const Text('Укажите дату Вашего рождения'),
                         IconButton(
-                          icon: Icon(Icons.info_outline,color: Colors.green),
+                          icon: const Icon(Icons.info_outline,color: Colors.green),
                           onPressed: () {
                             showDialog(
                               context: context,
                               builder: (BuildContext context) {
                                 return AlertDialog(
-                                  content: Text('Укажите дату своего рождения,а возраст установится сам :)\n \nПотом если что вы сможете его скрыть в настройках'),
+                                  content: const Text('Укажите дату своего рождения,а возраст установится сам :)\n \nПотом если что вы сможете его скрыть в настройках'),
                                   actions: <Widget>[
                                     TextButton(
-                                      child: Text('Понятно'),
+                                      child: const Text('Понятно'),
                                       onPressed: () {
                                         Navigator.of(context).pop();
                                       },
@@ -374,10 +307,11 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                     minimumYear: 1900,
                                     onDateTimeChanged: (newDate) {
                                       currentDate = newDate;
-                                      final selectedDateString =
-                                          "${currentDate.day}.${currentDate.month}.${currentDate.year}";
-                                      _birthdayController.text =
-                                          selectedDateString;
+                                      final day = currentDate.day.toString().padLeft(2, '0');
+                                      final month = currentDate.month.toString().padLeft(2, '0');
+                                      final year = currentDate.year.toString();
+                                      final selectedDateString = '$day.$month.$year';
+                                      _birthdayController.text = selectedDateString;
                                       final age = calculateAge(newDate);
                                       _ageController.text = age.toString();
                                     },
@@ -391,34 +325,37 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                               _birthdayController.text = selectedDateString;
                               final age = calculateAge(selectedDate);
                               _ageController.text = age.toString();
-                            } else {
-                              print('Выбор даты отменен');
                             }
                           },
                           child: IgnorePointer(
                             child: TextFormField(
                               controller: _birthdayController,
-                              decoration: InputDecoration(labelText: 'Дата рождения'),
+                              decoration: const InputDecoration(labelText: 'Дата рождения'),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Пожалуйста, укажите дата своего рождения';
+                                }
+                                // Добавьте дополнительные проверки по вашему усмотрению
+                                return null;
+                              },
                             ),
                           ),
                         ),
                         TextFormField(
                           controller: _ageController,
-                          decoration: InputDecoration(labelText: 'Возраст'),
+                          decoration: const InputDecoration(labelText: 'Возраст'),
                           enabled: false,
                         ),
                       ],
                     ),
                   ),
-
-
                   Step(
-                    title: Text('Укажите Ваш город'),
+                    title: const Text('Укажите Ваш город'),
                     content: Column(
                       children: <Widget>[
                         TextFormField(
                           controller: _locationController,
-                          decoration: InputDecoration(labelText: 'Город'),
+                          decoration: const InputDecoration(labelText: 'Город'),
                           validator: (value) {
                             if (value == null) {
                               return 'Пожалуйста, введите свой город';
@@ -433,12 +370,12 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                   Step(
                     title: Row(
                       children: <Widget>[
-                        Expanded(
+                        const Expanded(
                           child: Text('Выберите интересующие виды спорта'),
                         ),
-                        SizedBox(width: 10), // Добавьте отступ между текстом и иконкой
+                        const SizedBox(width: 10), // Добавьте отступ между текстом и иконкой
                         IconButton(
-                          icon: Icon(
+                          icon: const Icon(
                             Icons.info_outline,
                             color: Colors.green, // Здесь вы можете указать цвет иконки
                           ),
@@ -447,12 +384,12 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                               context: context,
                               builder: (BuildContext context) {
                                 return AlertDialog(
-                                  title: Text('Информация о выборе видов спорта'),
-                                  content: Text('Здесь вы можете выбрать интересующие вас виды спорта.\n\nВыбрав один или несколько интересующих Вас видов спорта,\n'
+                                  title: const Text('Информация о выборе видов спорта'),
+                                  content: const Text('Здесь вы можете выбрать интересующие вас виды спорта.\n\nВыбрав один или несколько интересующих Вас видов спорта,\n'
                                       'в следующем пункте не забудьте пожалуйста указать Ваши навыки владения выбранными видами спорта.'),
                                   actions: <Widget>[
                                     TextButton(
-                                      child: Text('Хорошо'),
+                                      child: const Text('Хорошо'),
                                       onPressed: () {
                                         Navigator.of(context).pop();
                                       },
@@ -472,12 +409,12 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                           builder: (context, snapshot) {
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
-                              return CircularProgressIndicator();
+                              return const CircularProgressIndicator();
                             } else if (snapshot.hasError) {
-                              return Text('Ошибка загрузки');
+                              return const Text('Ошибка загрузки');
                             } else if (!snapshot.hasData ||
                                 snapshot.data!.isEmpty) {
-                              return Text('Нет данных об интересах');
+                              return const Text('Нет данных об интересах');
                             } else {
                               final gamesInterests = snapshot.data!;
                               return Column(
@@ -502,8 +439,15 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                         });
                                       }
                                     },
-                                    decoration: InputDecoration(
+                                    decoration: const InputDecoration(
                                         labelText: 'Вид спорта'),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Пожалуйста, выберите хотя бы один вид спорта.';
+                                      }
+                                      // Добавьте дополнительные проверки по вашему усмотрению
+                                      return null;
+                                    },
                                   ),
                                   ElevatedButton(
                                     onPressed: () {
@@ -527,7 +471,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                       'Выбранные виды спорта: ${_selectedGameInterests.join(", ")}'),
                                   ElevatedButton(
                                     onPressed: _removeLastInterest,
-                                    child: Text('Удалить последний вид спорта'),
+                                    child: const Text('Удалить последний вид спорта'),
                                   ),
                                 ],
                               );
@@ -538,7 +482,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                     ),
                   ),
                   Step(
-                    title: Text('Укажите уровень владения выбранных видов спорта'),
+                    title: const Text('Укажите уровень владения выбранных видов спорта'),
                     content: Column(
                       children: <Widget>[
                         for (String sportInterest in _selectedGameInterests)
@@ -565,7 +509,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                       ],
                     ),
                   ),
-                  Step(
+                  /*Step(
                     title: Row(
                       children: <Widget>[
                         Expanded(
@@ -640,278 +584,47 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                       ],
                     ),
                   ),
-        Step(
-          title: Row(
-            children: <Widget>[
-              Expanded(
-                child: Text('Предпочтительное время активности'),
-              ),
-              SizedBox(width: 10),
-              IconButton(
-                icon: Icon(
-                  Icons.info_outline,
-                  color: Colors.blue,
-                ),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        content: Text('Выбрав нужное для Вас время,Вы будете своевременно получать информацию о начале мероприятий'),
-                        actions: <Widget>[
-                          TextButton(
-                            child: Text('Хорошо'),
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
-                    ],
-          ),
-                    content: Column(
-                      children: <Widget>[
-                        FutureBuilder<List<String>>(
-                          future: getMeetingPreferences(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return CircularProgressIndicator();
-                            } else if (snapshot.hasError) {
-                              return Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData ||
-                                snapshot.data!.isEmpty) {
-                              return Text('Нет данных о времени активности');
-                            } else {
-                              final meetingPreferences = snapshot.data!;
-                              return Column(
-                                children: <Widget>[
-                                  Column(
-                                    children: meetingPreferences
-                                        .map((String preference) {
-                                      return RadioListTile<String>(
-                                        title: Text(preference),
-                                        value: preference,
-                                        groupValue: _selectedMeetingPreferences,
-                                        onChanged: (String? value) {
-                                          setState(() {
-                                            _selectedMeetingPreferences = value;
-                                          });
-                                        },
-                                      );
-                                    }).toList(),
-                                  ),
-                                ],
-                              );
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
+                   */
                   Step(
-                    title: Text('Уровень Вашей активности'),
-                    content: Column(
-                      children: <Widget>[
-                        FutureBuilder<List<String>>(
-                          future: getActivityPreferences(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return CircularProgressIndicator();
-                            } else if (snapshot.hasError) {
-                              return Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData ||
-                                snapshot.data!.isEmpty) {
-                              return Text('Нет данных об уровне активности');
-                            } else {
-                              final activityPreferences = snapshot.data!;
-                              return Column(
-                                children: <Widget>[
-                                  Column(
-                                    children: activityPreferences
-                                        .map((String preference) {
-                                      return RadioListTile<String>(
-                                        title: Text(preference),
-                                        value: preference,
-                                        groupValue:
-                                            _selectedActivityPreferences,
-                                        onChanged: (String? value) {
-                                          setState(() {
-                                            _selectedActivityPreferences =
-                                                value;
-                                          });
-                                        },
-                                      );
-                                    }).toList(),
-                                  ),
-                                ],
-                              );
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Step(
-                    title: Text('Семейное положение'),
-                    content: Column(
-                      children: <Widget>[
-                        FutureBuilder<List<String>>(
-                          future: getFamilyStatus(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return CircularProgressIndicator();
-                            } else if (snapshot.hasError) {
-                              return Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData ||
-                                snapshot.data!.isEmpty) {
-                              return Text('Нет данных о семейном положении');
-                            } else {
-                              final familyStatusPreferences = snapshot.data!;
-                              return Column(
-                                children: <Widget>[
-                                  Column(
-                                    children: familyStatusPreferences
-                                        .map((String preference) {
-                                      return RadioListTile<String>(
-                                        title: Text(preference),
-                                        value: preference,
-                                        groupValue: _selectedFamilyStatus,
-                                        onChanged: (String? value) {
-                                          setState(() {
-                                            _selectedFamilyStatus = value;
-                                          });
-                                        },
-                                      );
-                                    }).toList(),
-                                  ),
-                                ],
-                              );
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Step(
-                    title: Text('Уровень открытости к новым знакомствам'),
-                    content: Column(
-                      children: <Widget>[
-                        FutureBuilder<List<String>>(
-                          future: getOpennessPreferences(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return CircularProgressIndicator();
-                            } else if (snapshot.hasError) {
-                              return Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData ||
-                                snapshot.data!.isEmpty) {
-                              return Text('Нет данных об уровне открытости');
-                            } else {
-                              final opennessPreferences = snapshot.data!;
-                              return Column(
-                                children: <Widget>[
-                                  Column(
-                                    children: opennessPreferences
-                                        .map((String preference) {
-                                      return RadioListTile<String>(
-                                        title: Text(preference),
-                                        value: preference,
-                                        groupValue:
-                                            _selectedOpennessPreferences,
-                                        onChanged: (String? value) {
-                                          setState(() {
-                                            _selectedOpennessPreferences =
-                                                value;
-                                          });
-                                        },
-                                      );
-                                    }).toList(),
-                                  ),
-                                ],
-                              );
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Step(
-                    title: Text('Укажите предпочтительную группу общения'),
-                    content: Column(
-                      children: <Widget>[
-                        FutureBuilder<List<String>>(
-                          future: getPartnerPreferences(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return CircularProgressIndicator();
-                            } else if (snapshot.hasError) {
-                              return Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData ||
-                                snapshot.data!.isEmpty) {
-                              return Text('Нет данных о группе общения');
-                            } else {
-                              final partnerPreferences = snapshot.data!;
-                              return Column(
-                                children: <Widget>[
-                                  Column(
-                                    children: partnerPreferences
-                                        .map((String preference) {
-                                      return RadioListTile<String>(
-                                        title: Text(preference),
-                                        value: preference,
-                                        groupValue: _selectedPartnerPreferences,
-                                        onChanged: (String? value) {
-                                          setState(() {
-                                            _selectedPartnerPreferences = value;
-                                          });
-                                        },
-                                      );
-                                    }).toList(),
-                                  ),
-                                ],
-                              );
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Step(
-                    title: Text('О себе'),
-                    content: Column(
-                      children: <Widget>[
-                        TextFormField(
-                          controller: _bioController,
-                          decoration: InputDecoration(labelText: 'О себе'),
-                          maxLines: null, // Разрешает многострочный ввод текста
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Добавьте другие этапы регистрации сюда
-                  // ...
-                  Step(
-                    title: Text('Завершение'),
+                    title: const Text('Завершение'),
                     content: Column(
                       children: <Widget>[
                         ElevatedButton(
-                          onPressed: _registerProfile,
-                          child: Text('Завершить регистрацию'),
+                          onPressed: () {
+                            if (_genderController.text.isEmpty||_genderController.text == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Вы не указали свой пол.'),
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                            }else if (_birthdayController.text.isEmpty||_birthdayController.text == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Вы не указали дату своего рождения'),
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                            }else if (_locationController.text.isEmpty||_locationController.text == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Вы указали город Вашего проживания'),
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                            }else if (_selectedGameInterests.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Вам необходимо указать хотя бы один интересующий Вас вид спорта.'),
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                            else{
+                              _registerProfile();
+                            }
+                          },
+                          child: const Text('Завершить регистрацию'),
                         ),
                       ],
                     ),
@@ -920,8 +633,6 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
               ),
             ],
           ),
-        ),
-      ),
-    );
+        );
   }
 }
