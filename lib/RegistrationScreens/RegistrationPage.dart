@@ -62,8 +62,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
           .collection('users')
           .doc(userCredential.user!.uid)
           .set({
-        'first_name': _firstName,
-        'last_name': _lastName,
+        'firstName': _firstName,
+        'lastName': _lastName,
         'email': _email,
         // Другие данные пользователя
       });

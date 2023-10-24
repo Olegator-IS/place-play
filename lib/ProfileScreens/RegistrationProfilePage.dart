@@ -1,10 +1,11 @@
+import 'dart:math';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../References/References.dart';
 import 'ProfileScreen.dart';
-import 'package:intl/intl.dart';
 
 
 void main() {
@@ -50,8 +51,8 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
 
           if (userData != null) {
             setState(() {
-              _firstNameController.text = userData['first_name'] ?? '';
-              _lastNameController.text = userData['last_name'] ?? '';
+              _firstNameController.text = userData['firstName'] ?? '';
+              _lastNameController.text = userData['lastName'] ?? '';
             });
           }
         }
@@ -74,6 +75,21 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
     return '';
   }
 
+  Map<String, Color> interestColors = {
+
+    'Пейнтбол': Colors.blue,
+    'Сноубординг': Colors.red,
+    'Бильярд': Colors.green,
+    // Добавьте другие интересы и соответствующие цвета
+  };
+
+  Color _generateRandomColor() {
+    final Random random = Random();
+    final int red = random.nextInt(256);
+    final int green = random.nextInt(256);
+    final int blue = random.nextInt(256);
+    return Color.fromARGB(255, red, green, blue);
+  }
   // Функция для вычисления возраста
   int calculateAge(DateTime birthDate) {
     final currentDate = DateTime.now();
@@ -94,10 +110,10 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
       String uid = user.uid;
       Map<String, dynamic> userProfileData = {
         'uid': uid,
-        'first_name': _firstNameController.text,
-        'last_name': _lastNameController.text,
-        'games_interests': _selectedGameInterests.join(', '),
-        'skill_levels': _skillLevels,
+        'firstName': _firstNameController.text,
+        'lastName': _lastNameController.text,
+        'gamesInterests': _selectedGameInterests.join(', '),
+        'skill:evels': _skillLevels,
         'location': _locationController.text,
         'age': _ageController.text,
         'birthday':_birthdayController.text,
@@ -183,7 +199,8 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                 steps: <Step>[
                   Step(
                     title: const Text('Имя и Фамилия'),
-                    content: Column(
+                    content: SingleChildScrollView(
+                      child: Column(
                       children: <Widget>[
                         TextFormField(
                           controller: _firstNameController,
@@ -208,11 +225,13 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                           },
                         ),
                       ],
+                      ),
                     ),
                   ),
                   Step(
                     title: const Text('Укажите Ваш пол', style: TextStyle(fontSize: 18)),
-                    content: Column(
+                    content: SingleChildScrollView(
+                      child: Column(
                       children: <Widget>[
                         ListTile(
                           leading: Radio<String>(
@@ -257,6 +276,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                           },
                         ),
                       ],
+                      ),
                     ),
                   ),
                   Step(
@@ -286,7 +306,8 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                         ),
                       ],
                     ),
-                    content: Column(
+                    content: SingleChildScrollView(
+                      child: Column(
                       children: <Widget>[
                         InkWell(
                           onTap: () async {
@@ -348,10 +369,12 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                         ),
                       ],
                     ),
+                    ),
                   ),
                   Step(
                     title: const Text('Укажите Ваш город'),
-                    content: Column(
+                    content: SingleChildScrollView(
+                      child: Column(
                       children: <Widget>[
                         TextFormField(
                           controller: _locationController,
@@ -366,6 +389,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                         ),
                       ],
                     ),
+                    ),
                   ),
                   Step(
                     title: Row(
@@ -373,56 +397,37 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                         const Expanded(
                           child: Text('Выберите интересующие виды спорта'),
                         ),
-                        const SizedBox(width: 10), // Добавьте отступ между текстом и иконкой
+                        const SizedBox(width: 10),
                         IconButton(
                           icon: const Icon(
                             Icons.info_outline,
-                            color: Colors.green, // Здесь вы можете указать цвет иконки
+                            color: Colors.green,
                           ),
                           onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  title: const Text('Информация о выборе видов спорта'),
-                                  content: const Text('Здесь вы можете выбрать интересующие вас виды спорта.\n\nВыбрав один или несколько интересующих Вас видов спорта,\n'
-                                      'в следующем пункте не забудьте пожалуйста указать Ваши навыки владения выбранными видами спорта.'),
-                                  actions: <Widget>[
-                                    TextButton(
-                                      child: const Text('Хорошо'),
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                      },
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
+                            // ...
                           },
                         ),
                       ],
                     ),
-                      content: Column(
+                    content: SingleChildScrollView(
+                      child: Column(
                       children: <Widget>[
                         FutureBuilder<List<String>>(
                           future: getGamesInterestsFromFirestore(),
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
                               return const CircularProgressIndicator();
                             } else if (snapshot.hasError) {
-                              return const Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData ||
-                                snapshot.data!.isEmpty) {
-                              return const Text('Нет данных об интересах');
+                              return Text('Ошибка загрузки');
+                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                              return Text('Нет данных об интересах');
                             } else {
                               final gamesInterests = snapshot.data!;
                               return Column(
                                 children: <Widget>[
                                   DropdownButtonFormField<String>(
                                     value: _selectedGameInterest,
-                                    items:
-                                        gamesInterests.map((String interest) {
+                                    items: gamesInterests.map((String interest) {
                                       return DropdownMenuItem<String>(
                                         value: interest,
                                         child: Text(interest),
@@ -430,8 +435,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                     }).toList(),
                                     onChanged: (String? value) {
                                       if (value != null &&
-                                          !_selectedGameInterests
-                                              .contains(value)) {
+                                          !_selectedGameInterests.contains(value)) {
                                         setState(() {
                                           _selectedGameInterest = value;
                                           _selectedGameInterests.add(value);
@@ -439,26 +443,18 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                         });
                                       }
                                     },
-                                    decoration: const InputDecoration(
-                                        labelText: 'Вид спорта'),
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Пожалуйста, выберите хотя бы один вид спорта.';
-                                      }
-                                      // Добавьте дополнительные проверки по вашему усмотрению
-                                      return null;
-                                    },
+                                    decoration: InputDecoration(
+                                      labelText: 'Вид спорта',
+                                    ),
                                   ),
                                   ElevatedButton(
                                     onPressed: () {
                                       setState(() {
                                         if (_selectedGameInterest != null &&
-                                            !_selectedGameInterests.contains(
-                                                _selectedGameInterest)) {
-                                          _selectedGameInterests
-                                              .add(_selectedGameInterest!);
-                                          _skillLevels[_selectedGameInterest!] =
-                                              0.0;
+                                            !_selectedGameInterests
+                                                .contains(_selectedGameInterest)) {
+                                          _selectedGameInterests.add(_selectedGameInterest!);
+                                          _skillLevels[_selectedGameInterest!] = 0.0;
                                           _selectedGameInterest = null;
                                         }
                                       });
@@ -468,22 +464,43 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                         : 'Добавить еще один вид спорта'),
                                   ),
                                   Text(
-                                      'Выбранные виды спорта: ${_selectedGameInterests.join(", ")}'),
-                                  ElevatedButton(
-                                    onPressed: _removeLastInterest,
-                                    child: const Text('Удалить последний вид спорта'),
+                                    'Выбранные виды спорта:',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
+                                  Wrap(
+                                    spacing: 8.0,
+                                    children: _selectedGameInterests.map((interest) {
+                                      if (!interestColors.containsKey(interest)) {
+                                        interestColors[interest] = _generateRandomColor();
+                                      }
+                                      Color color = interestColors[interest] ?? Colors.grey;
+                                      return Chip(
+                                        backgroundColor: color,
+                                        label: Text(interest),
+                                        onDeleted: () {
+                                          setState(() {
+                                            _selectedGameInterests.remove(interest);
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                  SizedBox(height: 30.0),
                                 ],
                               );
                             }
                           },
                         ),
                       ],
+                      ),
                     ),
                   ),
                   Step(
                     title: const Text('Укажите уровень владения выбранных видов спорта'),
-                    content: Column(
+                    content: SingleChildScrollView(
+                      child: Column(
                       children: <Widget>[
                         for (String sportInterest in _selectedGameInterests)
                           Column(
@@ -507,6 +524,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                             ],
                           ),
                       ],
+                    ),
                     ),
                   ),
                   /*Step(
@@ -587,7 +605,8 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                    */
                   Step(
                     title: const Text('Завершение'),
-                    content: Column(
+                    content: SingleChildScrollView(
+                      child: Column(
                       children: <Widget>[
                         ElevatedButton(
                           onPressed: () {
@@ -628,6 +647,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                         ),
                       ],
                     ),
+                  ),
                   ),
                 ],
               ),
