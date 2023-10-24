@@ -63,8 +63,8 @@ class _LoginPageState extends State<LoginPage> {
           final Map<String, dynamic> userData = json.decode(graphResponse.body);
 
 
-          final String firstName = userData['first_name'];
-          final String lastName = userData['last_name'];
+          final String firstName = userData['firstName'];
+          final String lastName = userData['lastName'];
 
 
           print(firstName);
@@ -83,15 +83,15 @@ class _LoginPageState extends State<LoginPage> {
 
             // Обновите документ пользователя в коллекции "users"
             await FirebaseFirestore.instance.collection('users').doc(uid).set({
-              'first_name': firstName,
-              'last_name': lastName,
+              'firstName': firstName,
+              'lastName': lastName,
               'email':email,
               // 'location':locationName
             });
 
 
             SharedPreferences prefs = await SharedPreferences.getInstance();
-            prefs.setString('first_name', firstName);
+            prefs.setString('firstName', firstName);
             prefs.setBool('isLoggedIn', true);
 
 
@@ -191,8 +191,8 @@ class _LoginPageState extends State<LoginPage> {
         // Запросите документ пользователя в коллекции "users"
         DocumentSnapshot userSnapshot = await FirebaseFirestore.instance.collection('users').doc(uid).get();
         print('testtttt');
-        print(userSnapshot.get('first_name'));
-        firstName = userSnapshot.get('first_name');
+        print(userSnapshot.get('firstName'));
+        firstName = userSnapshot.get('firstName');
         // Проверьте, существует ли документ и имеет ли он поле 'userProfiles'
         if (userSnapshot.exists) {
           Map<String, dynamic>? userData = userSnapshot.data() as Map<String, dynamic>?;
@@ -254,7 +254,7 @@ class _LoginPageState extends State<LoginPage> {
       // }
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setString('first_name', firstName);
+      prefs.setString('firstName', firstName);
       await prefs.setBool('isLoggedIn', true);
     } catch (e) {
       print('Error: $e');

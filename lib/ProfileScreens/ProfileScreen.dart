@@ -113,23 +113,23 @@ class _ProfileScreenState extends State<ProfileScreen>
       filledFields++;
     }
     // Повторите это для всех остальных полей
-    if (userProfile['last_name'] != null && userProfile['last_name'] != '') {
+    if (userProfile['lastName'] != null && userProfile['lastName'] != '') {
       filledFields++;
     }
     // Повторите это для всех остальных полей
-    if (userProfile['communication_preferences'] != null && userProfile['communication_preferences'] != '') {
+    if (userProfile['communicationPreferences'] != null && userProfile['communicationPreferences'] != '') {
       filledFields++;
     }
     // Повторите это для всех остальных полей
-    if (userProfile['family_status'] != null && userProfile['family_status'] != '') {
+    if (userProfile['familyStatus'] != null && userProfile['familyStatus'] != '') {
       filledFields++;
     }
     // Повторите это для всех остальных полей
-    if (userProfile['first_name'] != null && userProfile['first_name'] != '') {
+    if (userProfile['firstName'] != null && userProfile['firstName'] != '') {
       filledFields++;
     }
     // Повторите это для всех остальных полей
-    if (userProfile['games_interests'] != null && userProfile['games_interests'] != '') {
+    if (userProfile['gamesInterests'] != null && userProfile['gamesInterests'] != '') {
       filledFields++;
     }
     // Повторите это для всех остальных полей
@@ -137,11 +137,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       filledFields++;
     }
     // Повторите это для всех остальных полей
-    if (userProfile['last_name'] != null && userProfile['last_name'] != '') {
+    if (userProfile['lastName'] != null && userProfile['lastName'] != '') {
       filledFields++;
     }
     // Повторите это для всех остальных полей
-    if (userProfile['last_name'] != null && userProfile['last_name'] != '') {
+    if (userProfile['lastName'] != null && userProfile['lastName'] != '') {
       filledFields++;
     }
     // Повторите это для всех остальных полей
@@ -149,18 +149,18 @@ class _ProfileScreenState extends State<ProfileScreen>
       filledFields++;
     }
     // Повторите это для всех остальных полей
-    if (userProfile['meeting_preferences'] != null && userProfile['meeting_preferences'] != '') {
+    if (userProfile['meetingPreferences'] != null && userProfile['meetingPreferences'] != '') {
       filledFields++;
     }
     // Повторите это для всех остальных полей
-    if (userProfile['openness_controller'] != null && userProfile['openness_controller'] != '') {
+    if (userProfile['opennessController'] != null && userProfile['opennessController'] != '') {
       filledFields++;
     }
     // Повторите это для всех остальных полей
-    if (userProfile['partner_preferences'] != null && userProfile['partner_preferences'] != '') {
+    if (userProfile['partnerPreferences'] != null && userProfile['partnerPreferences'] != '') {
       filledFields++;
     }
-    if (userProfile['skill_levels'] != null && userProfile['skill_levels'] != '') {
+    if (userProfile['skillLevels'] != null && userProfile['skillLevels'] != '') {
       filledFields++;
     }
 
@@ -168,7 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final completionPercentage = double.parse(((filledFields / totalFields) * 100).toStringAsFixed(0));
 
     if (completionPercentage < 100) {
-      return 'Уважаемый ${userProfile['first_name']}, ваш профиль не имеет полной информации и заполнен на $completionPercentage%. Пожалуйста,заполните все поля.';
+      return 'Уважаемый ${userProfile['firstName']}, ваш профиль не имеет полной информации и заполнен на $completionPercentage%. Пожалуйста,заполните все поля.';
     } else {
       return ''; // Если профиль полностью заполнен, верните пустую строку
     }
@@ -176,7 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   void _toggleInterests() {
     if (userDataSnapshot != null) {
-      final gamesInterestsString = userDataSnapshot!['games_interests'];
+      final gamesInterestsString = userDataSnapshot!['gamesInterests'];
       final cleanedGamesInterestsString = gamesInterestsString.replaceAll('  ', ' ');
       final gamesInterestsList = cleanedGamesInterestsString.split(', ');
 
@@ -419,24 +419,24 @@ class _ProfileScreenState extends State<ProfileScreen>
               final profileCompletionNotification = calculateProfileCompletion(userData);
               print('lohhh');
               print(profileCompletionNotification);
-              final firstName = userData['first_name'] as String;
-              final lastName = userData['last_name'] as String;
+              final firstName = userData['firstName'] as String;
+              final lastName = userData['lastName'] as String;
               final age = userData['age'] as String ?? 'Не указан';
               final bio = userData['bio'] ?? '';
               final gender = userData['gender'] ?? 'Не определенный';
               final city = userData['location'] as String? ?? 'Не указан';
-              final gamesInterestsString = userData['games_interests'];
+              final gamesInterestsString = userData['gamesInterests'];
               final birthday = userData['birthday'];
               final cleanedGamesInterestsString =
               gamesInterestsString.replaceAll('  ', ' ');
               final gamesInterestsList = cleanedGamesInterestsString.split(', ');
-              final skillLevels = userData['skill_levels'] as Map<String, dynamic>;
+              final skillLevels = userData['skillLevels'] as Map<String, dynamic>;
               final activity = userData['activity'] as String? ?? 'Уровень активности не определен';
-              final communicationPref = userData['communication_preferences'] as String? ?? 'Предпочтения не указаны';
-              final familyStatus = userData['family_status'] as String? ?? 'Не указано';
-              final meetingPref = userData['meeting_preferences'] as String? ?? 'Предпочтения не указаны';
-              final partnerPref = userData['partner_preferences'] as String? ?? 'Предпочтения не указаны';
-              final opennessPref = userData['openness_controller']  ?? 'Не указано';
+              final communicationPref = userData['communicationPreferences'] as String? ?? 'Предпочтения не указаны';
+              final familyStatus = userData['familyStatus'] as String? ?? 'Не указано';
+              final meetingPref = userData['meetingPreferences'] as String? ?? 'Предпочтения не указаны';
+              final partnerPref = userData['partnerPreferences'] as String? ?? 'Предпочтения не указаны';
+              final opennessPref = userData['opennessController']  ?? 'Не указано';
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(

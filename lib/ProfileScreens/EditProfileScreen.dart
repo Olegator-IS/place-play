@@ -92,20 +92,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
           if (userData != null) {
             setState(() {
-              _firstNameController.text = userData['first_name'] ?? '';
-              _lastNameController.text = userData['last_name'] ?? '';
+              _firstNameController.text = userData['firstName'] ?? '';
+              _lastNameController.text = userData['lastName'] ?? '';
               _genderController.text = userData['gender'] ?? '';
               _birthdayController.text = userData['birthday'] ?? '';
               _ageController.text = userData['age'] ?? '';
-              _selectedCommunicationPreferences = userData['communication_preferences'] ?? '';
-              _selectedMeetingPreferences = userData['meeting_preferences'] ?? '';
+              _selectedCommunicationPreferences = userData['communicationPreferences'] ?? '';
+              _selectedMeetingPreferences = userData['meetingPreferences'] ?? '';
               _selectedActivityPreferences = userData['activity'] ?? '';
-              _selectedFamilyStatus = userData['family_status'] ?? '';
-              _selectedOpennessPreferences = userData['openness_controller'] ?? '';
-              _selectedPartnerPreferences = userData['partner_preferences'] ?? '';
+              _selectedFamilyStatus = userData['familyStatus'] ?? '';
+              _selectedOpennessPreferences = userData['opennessController'] ?? '';
+              _selectedPartnerPreferences = userData['partnerPreferences'] ?? '';
               _bioController.text = userData['bio'] ?? '';
               _locationController.text = userData['location'] ?? '';
-              final skillLevels = userData['skill_levels'] as Map<String, dynamic>?;
+              final skillLevels = userData['skillLevels'] as Map<String, dynamic>?;
               if (skillLevels != null) {
                 _skillLevels = skillLevels.map((key, value) => MapEntry(key.trim(), value.toDouble()));
                 print('Навыки $skillLevels');
@@ -113,14 +113,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 // Устанавливаем уровень навыков по умолчанию (например, 50.0) для всех видов спорта
                 _selectedGameInterests.forEach((interest) {
                   _skillLevels[interest] = 50.0;
-                  print('444444');
                 });
               }
               // final gamesInterestsString = userData['games_interests'];
               // final _selectedGameInterests = gamesInterestsString.split(', ');
               // final selectedSports = _selectedGameInterests.join(', ');
 
-              final gamesInterestsString = userData['games_interests'];
+              final gamesInterestsString = userData['gamesInterests'];
               _selectedGameInterests = gamesInterestsString.split(', ');
               _selectedGameInterests.forEach((interest) {
                 if (!_selectedGameInterests.contains(interest)) {
@@ -273,8 +272,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       Map<String, dynamic> userProfileData = {
         'uid': uid,
-        'first_name': _firstNameController.text,
-        'last_name': _lastNameController.text,
+        'firstName': _firstNameController.text,
+        'lastName': _lastNameController.text,
         // 'games_interests': _selectedGameInterests.join(', '),
         // 'skill_levels': _skillLevels,
         // 'location': _locationController.text,
@@ -300,7 +299,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             .update(userProfileData);
 
         SharedPreferences prefs = await SharedPreferences.getInstance();
-        prefs.setString('first_name', _firstNameController.text);
+        prefs.setString('firstName', _firstNameController.text);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => ProfileScreen(userId: uid)),
@@ -322,7 +321,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       Map<String, dynamic> userProfileData = {
         'uid': uid,
-        'games_interests': _selectedGameInterests.join(', '),
+        'gamesInterests': _selectedGameInterests.join(', '),
       };
 
 
@@ -353,7 +352,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       Map<String, dynamic> userProfileData = {
         'uid': uid,
-        'skill_levels': _skillLevels,
+        'skillLevels': _skillLevels,
       };
 
 

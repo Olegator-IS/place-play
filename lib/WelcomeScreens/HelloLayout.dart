@@ -27,7 +27,7 @@ class _HelloLayoutState extends State<HelloLayout> {
   void _setGreetingText() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-    username = prefs.getString('first_name') ?? "Unknown";
+    username = prefs.getString('firstName') ?? "Незнакомец";
     String _displayText = ''; // Текст для отображения
     print('HELLO');
     print(username);
@@ -95,7 +95,7 @@ class _HelloLayoutState extends State<HelloLayout> {
 
         if(!usersCollection.exists){
           prefs.setBool('isLoggedIn', false);
-          prefs.setString('first_name','');
+          prefs.setString('firstName','');
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -151,7 +151,7 @@ class _HelloLayoutState extends State<HelloLayout> {
         }
       }else{
         prefs.setBool('isLoggedIn', false);
-        prefs.setString('first_name','');
+        prefs.setString('firstName','');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
