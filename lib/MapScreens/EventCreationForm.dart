@@ -11,35 +11,45 @@ class EventCreationForm extends StatefulWidget {
   final String address;
   final String name;
   final String phoneNumber;
+  final String firstName;
 
-  EventCreationForm({required this.organizer, required this.activityType,required this.userId,required this.type,required this.address,required this.name,required this.phoneNumber});
+  const EventCreationForm({super.key, required this.organizer, required this.activityType,required this.userId,required this.type,required this.address,required this.name,required this.phoneNumber,required this.firstName});
 
   @override
   _EventCreationFormState createState() => _EventCreationFormState();
 }
 
 class EventData {
-  final String first_name;
-  final String date_event;
-  final String start_time_event;
+  final String firstName;
+  final String dateEvent;
+  final String startTimeEvent;
   final String organizer;
   final String type;
+  final String address;
+  final String uid;
+  final List<Map<String, String>> participants;
+
 
   EventData({
-  required this.first_name,
-  required this.date_event,
-  required this.start_time_event,
+  required this.firstName,
+  required this.dateEvent,
+  required this.startTimeEvent,
   required this.organizer,
     required this.type,
+    required this.address,
+    required this.uid,
+    required this.participants,
 });
 
 Map<String, dynamic> toJson() {
   return {
-    'first_name': first_name,
-    'date_event': date_event,
-    'start_time_event': start_time_event,
+    'firstName': firstName,
+    'dateEvent': dateEvent,
+    'startTimeEvent': startTimeEvent,
     'organizer': organizer,
-    'type': type
+    'type': type,
+    'uid': uid,
+    'participants':participants,
   };
 }
 }
@@ -56,6 +66,7 @@ class _EventCreationFormState extends State<EventCreationForm> {
   final TextEditingController _eventDateController = TextEditingController();
   final TextEditingController _eventTimeBeginController = TextEditingController();
   final TextEditingController _eventTimeEndController = TextEditingController();
+  final TextEditingController _participants = TextEditingController();
 
   @override
   void initState() {
@@ -74,7 +85,12 @@ class _EventCreationFormState extends State<EventCreationForm> {
         });
       }
     } catch (e) {
-      print('Ошибка при загрузке данных: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка при сохранении профиля: $e'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -84,23 +100,6 @@ class _EventCreationFormState extends State<EventCreationForm> {
 
 
   }
-  void _showEventCreationDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return EventCreationForm(
-          organizer: 'Организатор', // Замените на соответствующие значения
-          activityType: 'Тип активности',
-          userId: 'Идентификатор пользователя',
-          type: 'Тип события',
-          address: 'Адрес',
-          name: 'Название заведения',
-          phoneNumber:'Номер телефона',
-        );
-      },
-    );
-  }
-
 
   Future<void> addOrUpdateEvent(EventData event, String name) async {
     final collection = FirebaseFirestore.instance.collection('events');
@@ -127,22 +126,29 @@ class _EventCreationFormState extends State<EventCreationForm> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Создание ивента'),
+      title: const Text('Создание ивента'),
       content: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            Text('Название ивента:\nИгра в ${widget.type}',
+                style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20.0),
             Text('Организатор: ${widget.organizer}',
-              style: TextStyle(
+              style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20.0),
             Text('Тип активности: ${widget.activityType}',
-                style: TextStyle(
+                style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold)),
+            const SizedBox(height: 13.0),
             Text('Идентификатор пользователя: ${widget.userId}',
-                style: TextStyle(
-                fontSize: 13,
+                style: const TextStyle(
+                fontSize: 10,
                 fontWeight: FontWeight.bold)),
 
             GestureDetector(
@@ -151,10 +157,11 @@ class _EventCreationFormState extends State<EventCreationForm> {
                 final selectedDateString = DateFormat('dd.MM.yyyy').format(currentDate);
                 _eventDateController.text = selectedDateString;
 
-                DateTime? newDate = await showCupertinoModalPopup<DateTime?>(
+                 await showCupertinoModalPopup<DateTime?>(
                   context: context,
                   builder: (context) {
-                    final initialDate = selectedDate ?? currentDate;
+                    DateTime currentDate = DateTime.now();
+                    final initialDate = selectedDate;
                     return Container(
                       color: Colors.white,
                       height: 200,
@@ -163,38 +170,34 @@ class _EventCreationFormState extends State<EventCreationForm> {
                         backgroundColor: Colors.white,
                         initialDateTime: initialDate,
                         mode: CupertinoDatePickerMode.date,
-                        maximumYear: currentDate.year,
-                        minimumYear: 1900,
+                        minimumYear: currentDate.year,
                         onDateTimeChanged: (newDate) {
-                          final selectedDateString =
-                              "${currentDate.day}.${currentDate.month}.${currentDate.year}";
-                          _eventDateController.text =
-                              selectedDateString;
-                          // Remove the setState from here
+                            currentDate = newDate;
+                            final day = currentDate.day.toString().padLeft(
+                                2, '0');
+                            final month = currentDate.month.toString().padLeft(
+                                2, '0');
+                            final year = currentDate.year.toString();
+                            final selectedDateString = '$day.$month.$year';
+                            _eventDateController.text = selectedDateString;
+                            // Remove the setState from here
+
                         },
                       ),
                     );
                   },
                 );
 
-                if (selectedDate != null) {
                   setState(() {
                     final selectedDateString =
                         "${selectedDate.day}.${selectedDate.month}.${selectedDate.year}";
                     _eventDateController.text = selectedDateString;
                   });
-                  // final selectedDateString =
-                  // DateFormat('dd.MM.yyyy').format(newDate);
-                  // _eventDateController.text = selectedDateString;
-                } else {
-                  print('Выбор даты отменен');
-                }
               },
-
               child: AbsorbPointer(
                 child: TextFormField(
                   controller: _eventDateController,
-                  decoration: InputDecoration(labelText: 'Дата ивента'),
+                  decoration: const InputDecoration(labelText: 'Дата ивента'),
                 ),
               ),
             ),
@@ -202,54 +205,40 @@ class _EventCreationFormState extends State<EventCreationForm> {
               children: [
                 Expanded(
                   child: TextFormField(
-                    decoration: InputDecoration(labelText: 'Время начала'),
-                    controller: TextEditingController(
-                      text: '${startTime.hour}:${startTime.minute}',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Время начала ивента'),
+                    controller: _eventTimeBeginController,
                     readOnly: true,
-                    onTap: () {
-                      showTimePicker(
+                    onTap: () async {
+                      DateTime selectedDateTime = await showModalBottomSheet(
                         context: context,
-                        initialTime: startTime,
-                      ).then((time) {
-                        if (time != null) {
-                          setState(() {
-                            startTime = time;
-                            // Обновите текст в поле после выбора времени
-                            _eventTimeBeginController.text = '${time.hour}:${time.minute}';
-                          });
-                        }
-                      });
+                        builder: (BuildContext builder) {
+                          return SizedBox(
+                            height: 200,
+                            child: CupertinoDatePicker(
+                              use24hFormat: true,
+                              mode: CupertinoDatePickerMode.time,
+                              onDateTimeChanged: (DateTime newDateTime) {
+                                String formattedTime = DateFormat.Hm().format(newDateTime);
+                                _eventTimeBeginController.text = formattedTime;
+                              },
+                            ),
+                          );
+                        },
+                      );
+                      setState(() {
+                          startTime = TimeOfDay.fromDateTime(selectedDateTime);
+                        });
                     },
                   ),
                 ),
-                // Expanded(
-                //   child: TextFormField(
-                //     decoration: InputDecoration(labelText: 'Время окончания'),
-                //     controller: TextEditingController(
-                //       text: '${endTime.hour}:${endTime.minute}',
-                //     ),
-                //     readOnly: true,
-                //     onTap: () {
-                //       showTimePicker(
-                //         context: context,
-                //         initialTime: endTime,
-                //       ).then((time) {
-                //         if (time != null) {
-                //           setState(() {
-                //             endTime = time;
-                //             // Обновите текст в поле после выбора времени
-                //             _eventTimeEndController.text = '${time.hour}:${time.minute}';
-                //           });
-                //         }
-                //       });
-                //     },
-                //   ),
-                // ),
               ],
             ),
+            Text('Местоположение: ${widget.address}',
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold)),
             CheckboxListTile(
-              title: Text('Заведение уже забронировано'),
+              title: const Text('Заведение уже забронировано'),
               value: isBooked,
               onChanged: (value) {
                 setState(() {
@@ -261,90 +250,78 @@ class _EventCreationFormState extends State<EventCreationForm> {
         ),
       ),
       actions: [
-        // ElevatedButton(
-        //   onPressed: () {
-        //     if (_eventDateController.text.isEmpty) {
-        //       showDialog(
-        //         context: context,
-        //         builder: (context) {
-        //           return AlertDialog(
-        //             title: Text('Ошибка'),
-        //             content: Text('Пожалуйста, выберите дату ивента.'),
-        //             actions: [
-        //               TextButton(
-        //                 onPressed: () {
-        //                   Navigator.of(context).pop();
-        //                 },
-        //                 child: Text('OK'),
-        //               ),
-        //             ],
-        //           );
-        //         },
-        //       );
-        //       return; // Остановка выполнения кода
-        //     }
-        //
-        //     if (!isBooked) {
-        //       // Проверка, был ли выбран чекбокс "Заведение уже забронировано"
-        //       showDialog(
-        //           context: context,
-        //           builder: (context) {
-        //             return AlertDialog(
-        //               title: Text('Подтвердите бронирование'),
-        //               content: Text('Пожалуйста свяжитесь по контактным номерам и забронируйте место!'),
-        //               actions: [
-        //                 TextButton(
-        //                   onPressed: () {
-        //                     Navigator.of(context).pop();
-        //                   },
-        //                   child: Text('OK'),
-        //                 ),
-        //               ],
-        //             );
-        //           });
-        //       return; // Остановка выполнения кода
-        //     }
-        //
-        //     Navigator.of(context).pop(); // Закрыть диалог
-        //     showDialog(
-        //       context: context,
-        //       builder: (context) {
-        //         return AlertDialog(
-        //           title: Text('Успешно', style: TextStyle(color: Colors.red, fontSize: 24)), // Заголовок красного цвета
-        //           content: Column(
-        //             mainAxisSize: MainAxisSize.min,
-        //             children: <Widget>[
-        //               Text(
-        //                 'Ваша игра в ${widget.activityType} состоится в ${startTime.hour}:${startTime.minute}\n'
-        //                     'По адресу:\n${widget.address}\nB заведении:\n${widget.name}\nПросим прибыть на месте чуточку раньше.\nУдачной игры!', // Текст поздравления
-        //                 style: TextStyle(fontSize: 18),
-        //               ),
-        //             ],
-        //           ),
-        //           actions: [
-        //             TextButton(
-        //               onPressed: () {
-        //                 Navigator.of(context).pop();
-        //               },
-        //               child: Text('OK', style: TextStyle(color: Colors.blue, fontSize: 20)), // Кнопка OK с синим текстом
-        //             ),
-        //           ],
-        //         );
-        //       },
-        //     );
-        //
-        //   },
-        //
-        // ),
         ElevatedButton(
           onPressed: () {
+            if (_eventDateController.text.isEmpty) {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: const Text('Ошибка'),
+                    content: const Text('Пожалуйста, выберите дату ивента.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  );
+                },
+              );
+              return; // Остановка выполнения кода
+            }
+            if (_eventTimeBeginController.text.isEmpty) {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: const Text('Ошибка'),
+                    content: const Text('Пожалуйста, выберите время начала ивента.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  );
+                },
+              );
+              return; // Остановка выполнения кода
+            }
+
+            if (!isBooked) {
+              // Проверка, был ли выбран чекбокс "Заведение уже забронировано"
+              showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: const Text('Подтвердите бронирование'),
+                      content: Text('Пожалуйста свяжитесь по контактным номерам и забронируйте место!\n\nНе забудьте сообщить что вы бронируете через PlaceAndPlay! ;) \n\n${widget.phoneNumber}\n\n${widget.name}'),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    );
+                  });
+              return; // Остановка выполнения кода
+            }
             // Создайте экземпляр EventData с данными из формы
             EventData newEvent = EventData(
-              first_name: widget.name,
-              date_event: _eventDateController.text,
-              start_time_event: '${startTime.hour}:${startTime.minute}',
+              firstName: widget.name,
+              dateEvent: _eventDateController.text,
+              startTimeEvent: _eventTimeBeginController.text,
               organizer: widget.organizer,
               type: widget.type,
+              address: widget.address,
+              uid: widget.userId, participants: [{'uid': widget.userId.toString(), 'firstName': widget.firstName.toString()}],
             );
 
             // Добавьте новое событие в список
@@ -354,25 +331,32 @@ class _EventCreationFormState extends State<EventCreationForm> {
             final eventsJson = events.map((event) => event.toJson()).toList();
             final jsonData = {'events': eventsJson};
 
-            print(jsonData); // Выведет JSON данные в консоль (для проверки)
-
             addOrUpdateEvent(newEvent,widget.name);
             // Очистите форму и закройте диалог
-            _eventDateController.clear();
-            _eventTimeBeginController.clear();
-            _eventTimeEndController.clear();
+
             Navigator.of(context).pop(); // Закрыть диалог
                 showDialog(
                   context: context,
                   builder: (context) {
                     return AlertDialog(
-                      title: Text('Успешно', style: TextStyle(color: Colors.red, fontSize: 24)), // Заголовок красного цвета
+                      title: const Text('Успешно', style: TextStyle(color: Colors.red, fontSize: 24)), // Заголовок красного цвета
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
                           Text(
-                            'Ваша игра в ${widget.activityType} состоится в ${startTime.hour}:${startTime.minute}\n'
-                                'По адресу:\n${widget.address}\nB заведении:\n${widget.name}\nПросим прибыть на месте чуточку раньше.\nУдачной игры!', // Текст поздравления
+                            'Ваша игра в ${widget.activityType} состоится!',
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                          Text(
+                                '\n${widget.name}\n\n${_eventTimeBeginController.text}\n\n${widget.address}',
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 30.0,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Text(
+                            '\nПросим прибыть на место чуточку раньше.\n\nУдачной игры!', // Текст поздравления
                             style: TextStyle(fontSize: 18),
                           ),
                         ],
@@ -381,8 +365,11 @@ class _EventCreationFormState extends State<EventCreationForm> {
                         TextButton(
                           onPressed: () {
                             Navigator.of(context).pop();
+                            _eventDateController.clear();
+                            _eventTimeBeginController.clear();
+                            _eventTimeEndController.clear();
                           },
-                          child: Text('OK', style: TextStyle(color: Colors.blue, fontSize: 20)), // Кнопка OK с синим текстом
+                          child: const Text('OK', style: TextStyle(color: Colors.blue, fontSize: 20)), // Кнопка OK с синим текстом
                         ),
                       ],
                     );
@@ -393,14 +380,14 @@ class _EventCreationFormState extends State<EventCreationForm> {
 
             // Дальше вы можете отправить JSON данные на сервер или сохранить их локально
           },
-          child: Text('Создать ивент'),
+          child: const Text('Создать ивент'),
         ),
 
         TextButton(
           onPressed: () {
             Navigator.of(context).pop(); // Закрыть диалог без сохранения
           },
-          child: Text('Отмена'),
+          child: const Text('Отмена'),
         ),
       ],
     );
