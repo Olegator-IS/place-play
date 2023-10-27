@@ -113,7 +113,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
         'firstName': _firstNameController.text,
         'lastName': _lastNameController.text,
         'gamesInterests': _selectedGameInterests.join(', '),
-        'skill:evels': _skillLevels,
+        'skillLevels': _skillLevels,
         'location': _locationController.text,
         'age': _ageController.text,
         'birthday':_birthdayController.text,
