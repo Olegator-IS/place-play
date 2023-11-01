@@ -153,30 +153,25 @@ class _EventCreationFormState extends State<EventCreationForm> {
 
             GestureDetector(
               onTap: () async {
-                final currentDate = DateTime.now();
-                final selectedDateString = DateFormat('dd.MM.yyyy').format(currentDate);
-                _eventDateController.text = selectedDateString;
+                final selectedDate =
 
                  await showCupertinoModalPopup<DateTime?>(
                   context: context,
                   builder: (context) {
                     DateTime currentDate = DateTime.now();
-                    final initialDate = selectedDate;
                     return Container(
                       color: Colors.white,
                       height: 200,
                       child: CupertinoDatePicker(
                         use24hFormat: true,
                         backgroundColor: Colors.white,
-                        initialDateTime: initialDate,
+                        initialDateTime: currentDate,
                         mode: CupertinoDatePickerMode.date,
-                        minimumYear: currentDate.year,
+                        minimumDate: currentDate,
                         onDateTimeChanged: (newDate) {
                             currentDate = newDate;
-                            final day = currentDate.day.toString().padLeft(
-                                2, '0');
-                            final month = currentDate.month.toString().padLeft(
-                                2, '0');
+                            final day = currentDate.day.toString().padLeft(2, '0');
+                            final month = currentDate.month.toString().padLeft(2, '0');
                             final year = currentDate.year.toString();
                             final selectedDateString = '$day.$month.$year';
                             _eventDateController.text = selectedDateString;
@@ -188,11 +183,7 @@ class _EventCreationFormState extends State<EventCreationForm> {
                   },
                 );
 
-                  setState(() {
-                    final selectedDateString =
-                        "${selectedDate.day}.${selectedDate.month}.${selectedDate.year}";
-                    _eventDateController.text = selectedDateString;
-                  });
+
               },
               child: AbsorbPointer(
                 child: TextFormField(

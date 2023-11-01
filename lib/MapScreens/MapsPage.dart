@@ -71,6 +71,8 @@ class LegendItem extends StatelessWidget {
 }
 
 class MapsPageState extends State<MapsPage> {
+  DateTime? selectedDate; // Добавляем переменную для хранения выбранной даты
+
   String markerName = "";
   DocumentSnapshot? userDataSnapshot;
   String firstName = "";
@@ -139,6 +141,22 @@ class MapsPageState extends State<MapsPage> {
 
     return BitmapDescriptor.fromBytes(buffer!);
   }
+  bool isDateInFuture(String dateEvent) {
+    final dateFormat = DateFormat('dd.MM.yyyy');
+    final eventDateTime = dateFormat.parse(dateEvent);
+    final currentDateTime = DateTime.now();
+
+    return eventDateTime.isAfter(currentDateTime);
+  }
+
+  bool isDateInPast(String dateEvent, int daysAgo) {
+    final dateFormat = DateFormat('dd.MM.yyyy');
+    final eventDateTime = dateFormat.parse(dateEvent);
+    final currentDateTime = DateTime.now();
+    final difference = currentDateTime.difference(eventDateTime);
+
+    return difference.inDays >= daysAgo;
+  }
 
   bool isEventExpired(String startTimeEvent) {
     final eventTime = TimeOfDay.fromDateTime(DateTime.parse("2023-10-27 $startTimeEvent:00"));
@@ -155,6 +173,7 @@ class MapsPageState extends State<MapsPage> {
     if (hoursDiff < 0 || (hoursDiff == 0 && minutesDiff < 0)) {
       // Событие истекло
       print('Срок события уже истек.');
+      print(eventTime);
       // Здесь вы можете вывести информацию о том, что событие завершилось
       return true;
     } else {
@@ -164,6 +183,7 @@ class MapsPageState extends State<MapsPage> {
       return false;
     }
   }
+
 
   void _addTextMarkersToMap() async {
     List<TextMarker> textMarkersCopy = List.from(_textMarkers); // Создаем копию _textMarkers
@@ -293,13 +313,43 @@ class MapsPageState extends State<MapsPage> {
                         } else if (snapshot.hasError) {
                           return Text('Произошла ошибка: ${snapshot.error}');
                         } else {
+
                           return Column(
                             mainAxisSize: MainAxisSize.min,
-                            children: [
 
-                              Text('Мероприятия на сегодня',
-                                style: TextStyle(color: Colors.black, fontSize: 18)),
-                              SizedBox(height: 8.0),
+                            children: [
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => EventCreationForm(
+                                        organizer: firstName.toString(),
+                                        activityType: type,
+                                        userId: widget.userId,
+                                        type: type,
+                                        address: address,
+                                        name: name,
+                                        phoneNumber: phoneNumber, firstName: firstName,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Text('Создать событие'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.black38,
+                                  textStyle: const TextStyle(
+                                    fontSize: 22.0,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const Text('Все ивенты', style: TextStyle(color: Colors.black, fontSize: 18)),
+
+                              const Text('Ивенты отмеченные красным цветом уже завершены,присоединиться невозможно\n', style: TextStyle(color: Colors.red, fontSize: 12)),
+                              const Text('Прошедшие ивенты отображаются за последние 3 дня', style: TextStyle(color: Colors.red, fontSize: 12)),
+
+
                               FutureBuilder<DocumentSnapshot>(
                                 future: FirebaseFirestore.instance.collection('events').doc(name).get(),
                                 builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> eventSnapshot) {
@@ -313,7 +363,14 @@ class MapsPageState extends State<MapsPage> {
                                       return Text('Событий не найдено');
                                     }
 
-                                    final eventsList = eventData['events'] as List<dynamic>;
+                                    const Text('Доступные мероприятия на', style: TextStyle(color: Colors.black, fontSize: 18));
+                                    Text(
+                                      selectedDate != null
+                                          ? ' ${DateFormat('dd.MM.yyyy').format(selectedDate!)}'
+                                          : 'Выберите дату', // Отобразить "Выберите дату", если дата не выбрана
+                                      style: TextStyle(color: Colors.black, fontSize: 18),
+                                    );
+                                  final eventsList = eventData['events'] as List<dynamic>;
 
                                     // Создайте список виджетов для отображения данных о событиях
                                     List<Widget> eventWidgets = [];
@@ -335,82 +392,94 @@ class MapsPageState extends State<MapsPage> {
                                         return {'uid': uid, 'firstName': firstName};
                                       }).toList();
                                       DateTime currentDate = DateTime.now();
+                                      DateTime twentyFourHoursAgo = currentDate.subtract(Duration(hours: 24));
                                       DateTime eventDate = DateFormat('dd.MM.yyyy').parse(dateEvent);
                                       String currentDateFormatted = DateFormat('dd.MM.yyyy').format(currentDate);
                                       String eventDateFormatted = DateFormat('dd.MM.yyyy').format(eventDate);
 
                                       bool isSameDate = currentDateFormatted == eventDateFormatted; // проверка на день
                                       final eventTime = TimeOfDay.fromDateTime(DateTime.parse("2023-10-27 $startTimeEvent:00"));
+                                      bool isWithinLast24Hours = eventDate.isAfter(twentyFourHoursAgo);
+                                      Duration timeDifference = currentDate.difference(eventDate);
+
 
                                       final currentTime = TimeOfDay.now();
 
 
+                                      print('$timeDifference.inDays $eventDate');
 
-                if (!isSameDate) {
-                  eventWidgets.add(
-                    InkWell(
-                      child: Column(
-                        children: [
-                          SizedBox(height: 16.0),
-                          Row(
-                            children: [
-                              Text('Тип события:'),
-                              SizedBox(width: 8),
-                              Text(type),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Text('Имя организатора:'),
-                              SizedBox(width: 8),
-                              Text(organizer),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Text('Участники:'),
-                              SizedBox(width: 8),
-                              Text(
-                                participants.map((participant) => participant['firstName']).join(', '),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Text('Дата события:'),
-                              SizedBox(width: 8),
-                              Text(dateEvent),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Text('Время начала:'),
-                              SizedBox(width: 8),
-                              Text(startTimeEvent),
-                            ],
-                          ),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center, // Для размещения текста по центру
+
+                if (!isSameDate && !isDateInFuture(dateEvent)) {
+                  if(!isDateInPast(dateEvent, 2)) {
+                    eventWidgets.add(
+                      InkWell(
+                        child: Column(
+                          children: [
+                            SizedBox(height: 16.0),
+                            Row(
                               children: [
+                                Text('Тип события:'),
+                                SizedBox(width: 8),
+                                Text(type),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text('Имя организатора:'),
+                                SizedBox(width: 8),
+                                Text(organizer),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text('Участники:'),
+                                SizedBox(width: 8),
                                 Text(
-                                  'Данное мероприятие закончено\n$eventDateFormatted\nРегистрация невозможна',
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 17.0,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  participants.map((
+                                      participant) => participant['firstName'])
+                                      .join(', '),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
+                            Row(
+                              children: [
+                                Text('Дата события:'),
+                                SizedBox(width: 8),
+                                Text(dateEvent),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text('Время начала:'),
+                                SizedBox(width: 8),
+                                Text(startTimeEvent),
+                              ],
+                            ),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                // Для размещения текста по центру
+                                children: [
+                                  Text(
+                                    'Данное мероприятие закончено\n$eventDateFormatted\nРегистрация невозможна',
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 17.0,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                }else if(isSameDate){
-                  if (isEventExpired(startTimeEvent)) {
+                    );
+                  }
+
+                }else if(isDateInFuture(dateEvent) || isSameDate){
+                  if (isSameDate && isEventExpired(startTimeEvent)) {
                     final eventHour = eventTime.hour;
                     final eventMinute = eventTime.minute;
                     final currentHour = currentTime.hour;
@@ -557,7 +626,7 @@ class MapsPageState extends State<MapsPage> {
                                   icon: Icon(Icons.group), // Иконка "группа пользователей"
                                   label: Text('Посмотреть участников'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.teal,
+                                    backgroundColor: Colors.indigo,
                                     textStyle: const TextStyle(
                                       fontSize: 15.0,
                                       fontWeight: FontWeight.bold,
@@ -609,25 +678,7 @@ class MapsPageState extends State<MapsPage> {
                                   }
                                 },
                               ),
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => EventCreationForm(
-                                          organizer: firstName.toString(),
-                                          activityType: type,
-                                          userId: widget.userId,
-                                          type: type,
-                                          address: address,
-                                          name: name,
-                                          phoneNumber: phoneNumber, firstName: firstName,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: Text('Создать событие')
-                              ),
+
                             ],
                           );
                         }
