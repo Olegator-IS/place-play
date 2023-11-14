@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,11 +7,16 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:location/location.dart';
-import 'package:placeandplay/MapScreens/EventCreationForm.dart';
+import 'package:placeandplay/Events/EventCreationForm.dart';
+import 'package:placeandplay/ProfileScreens/ProfileScreen.dart';
+import 'package:placeandplay/ProfileScreens/ViewProfileScreen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../EmptyScreen.dart';
-import '../ProfileScreens/ProfileScreen.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:intl/intl.dart';
+
+import '../Events/EventsList.dart';
+
 
 
 
@@ -70,9 +74,9 @@ class LegendItem extends StatelessWidget {
   }
 }
 
+
 class MapsPageState extends State<MapsPage> {
   DateTime? selectedDate; // Добавляем переменную для хранения выбранной даты
-
   String markerName = "";
   DocumentSnapshot? userDataSnapshot;
   String firstName = "";
@@ -93,6 +97,9 @@ class MapsPageState extends State<MapsPage> {
   }
 
   Future<void> _loadUserData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString('uid',widget.userId);
+    print('попал сюда111111111111111111111111111111111111111111111111111111111111111111111111111111');
     try {
       final snapshot = await FirebaseFirestore.instance.collection('events').doc().get();
       if (snapshot.exists) {
@@ -209,6 +216,8 @@ class MapsPageState extends State<MapsPage> {
   }
 
   Future<void> _fetchLocationsFromFirestore() async {
+    final String firstNameUser;
+    SharedPreferences prefs = await SharedPreferences.getInstance();
 
 
     Location location = Location();
@@ -377,10 +386,12 @@ class MapsPageState extends State<MapsPage> {
 
                                     eventsList.forEach((event) {
                                       final type = event['type'];
-                                      final firstName = event['firstName'];
+                                      final markerName = event['eventName'];
                                       final dateEvent = event['dateEvent'];
                                       final startTimeEvent = event['startTimeEvent'];
+                                      final isRegistered = event['isRegistered'];
                                       final organizer = event['organizer'];
+                                      final organizerUid = event['uid'];
                                       final List<dynamic> participantsData = event['participants'];
                                       final List<Map<String, String>> participants = participantsData.map((participant) {
                                         final Map<String, dynamic> participantData = participant as Map<String, dynamic>;
@@ -453,6 +464,19 @@ class MapsPageState extends State<MapsPage> {
                                 Text('Время начала:'),
                                 SizedBox(width: 8),
                                 Text(startTimeEvent),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text('Статус:'),
+                                SizedBox(width: 8),
+                                Text(
+                                  isRegistered ? 'Подтверждено' : 'Ожидает регистрации',
+                                  style: TextStyle(
+                                    color: isRegistered ? Colors.green : Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ],
                             ),
                             SingleChildScrollView(
@@ -528,6 +552,19 @@ class MapsPageState extends State<MapsPage> {
                                 Text(startTimeEvent),
                               ],
                             ),
+                            Row(
+                              children: [
+                                Text('Статус:'),
+                                SizedBox(width: 8),
+                                Text(
+                                  isRegistered ? 'Подтверждено' : 'Ожидает регистрации',
+                                  style: TextStyle(
+                                    color: isRegistered ? Colors.green : Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                             SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               child: Row(
@@ -549,10 +586,35 @@ class MapsPageState extends State<MapsPage> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center, // Для размещения кнопок в начале и в конце строки
                                 children: [
+                                  Visibility(
+                                  visible: !isCurrentUserParticipant(participants, widget.userId),
                                   // Промежуток между кнопками
-                                  ElevatedButton.icon(
+                              child: ElevatedButton.icon(
                                     onPressed: () {
-                                      // Действия при нажатии на кнопку "Присоединиться"
+                                      String currentUserId = widget.userId;
+                                      print('Текущий пользователь нажал на Присоединиться: $currentUserId');
+
+                                      // Проверьте, есть ли текущий пользователь уже в списке участников
+                                      bool isUserAlreadyParticipant = false;
+                                      for (var participant in participants) {
+                                        if (participant['uid'] == currentUserId) {
+                                          isUserAlreadyParticipant = true;
+                                          break;
+                                        }
+                                      }
+
+                                      // Если текущего пользователя еще нет в списке, добавьте его
+                                      if (!isUserAlreadyParticipant) {
+                                        String? firstNameParticipant = prefs.getString('firstName');
+                                        // Создайте нового участника
+                                        Map<String, String> newParticipant = {'uid': currentUserId, 'firstName': firstNameParticipant as String};
+
+                                        // Добавьте нового участника в список
+                                        participants.add(newParticipant);
+
+                                        // Вызовите функцию для присоединения к мероприятию
+                                        joinEvent(markerName, dateEvent, startTimeEvent, currentUserId, firstNameParticipant, organizerUid);
+                                      }
                                     },
                                     icon: Icon(Icons.add), // Иконка "плюс"
                                     label: Text('Присоединиться'),
@@ -563,6 +625,7 @@ class MapsPageState extends State<MapsPage> {
                                           fontWeight: FontWeight.bold,
                                         ),
                                     ),
+                                  ),
                                   ),
                                 ],
                               ),
@@ -595,11 +658,15 @@ class MapsPageState extends State<MapsPage> {
                             children: [
                               Text('Участники:'),
                               SizedBox(width: 8),
-                              Text(
-                                participants.map((participant) => participant['firstName']).join(', '),
+                              Expanded(
+                                child: Text(
+                                  participants.map((participant) => participant['firstName']).join(', '),
+                                  overflow: TextOverflow.ellipsis, // Add ellipsis for better visual indication of overflow
+                                ),
                               ),
                             ],
                           ),
+
                           Row(
                             children: [
                               Text('Дата события:'),
@@ -614,6 +681,19 @@ class MapsPageState extends State<MapsPage> {
                               Text(startTimeEvent),
                             ],
                           ),
+                          Row(
+                            children: [
+                              Text('Статус:'),
+                              SizedBox(width: 8),
+                              Text(
+                                isRegistered ? 'Подтверждено' : 'Ожидает регистрации',
+                                style: TextStyle(
+                                  color: isRegistered ? Colors.green : Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Row(
@@ -621,9 +701,15 @@ class MapsPageState extends State<MapsPage> {
                               children: [
                                 ElevatedButton.icon(
                                   onPressed: () {
-                                    // Действия при нажатии на кнопку "Посмотреть участников"
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => ParticipantsDialog(
+                                        participants: participants,
+                                        organizerUid: organizerUid, currentUserUid: widget.userId, // Передайте UID организатора
+                                      ),
+                                    );
                                   },
-                                  icon: Icon(Icons.group), // Иконка "группа пользователей"
+                                  icon: Icon(Icons.group),
                                   label: Text('Посмотреть участников'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.indigo,
@@ -639,20 +725,46 @@ class MapsPageState extends State<MapsPage> {
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center, // Для размещения кнопок в начале и в конце строки
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                // Промежуток между кнопками
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    // Действия при нажатии на кнопку "Присоединиться"
-                                  },
-                                  icon: Icon(Icons.add), // Иконка "плюс"
-                                  label: Text('Присоединиться'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                    textStyle: const TextStyle(
-                                      fontSize: 25.0,
-                                      fontWeight: FontWeight.bold,
+                                Visibility(
+                                  visible: !isCurrentUserParticipant(participants, widget.userId),
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      // Получите UID текущего пользователя (замените на фактический способ получения UID текущего пользователя)
+                                      String currentUserId = widget.userId;
+                                      print('Текущий пользователь нажал на Присоединиться: $currentUserId');
+
+                                      // Проверьте, есть ли текущий пользователь уже в списке участников
+                                      bool isUserAlreadyParticipant = false;
+                                      for (var participant in participants) {
+                                        if (participant['uid'] == currentUserId) {
+                                          isUserAlreadyParticipant = true;
+                                          break;
+                                        }
+                                      }
+
+                                      // Если текущего пользователя еще нет в списке, добавьте его
+                                      if (!isUserAlreadyParticipant) {
+                                        String? firstNameParticipant = prefs.getString('firstName');
+                                        // Создайте нового участника
+                                        Map<String, String> newParticipant = {'uid': currentUserId, 'firstName': firstNameParticipant as String};
+
+                                        // Добавьте нового участника в список
+                                        participants.add(newParticipant);
+
+                                        // Вызовите функцию для присоединения к мероприятию
+                                        joinEvent(markerName, dateEvent, startTimeEvent, currentUserId, firstNameParticipant, organizerUid);
+                                      }
+                                    },
+                                    icon: Icon(Icons.add),
+                                    label: Text('Присоединиться'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      textStyle: const TextStyle(
+                                        fontSize: 25.0,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -694,6 +806,8 @@ class MapsPageState extends State<MapsPage> {
         );
 
 
+
+
         setState(() {
            _markers.add(marker);
 
@@ -707,6 +821,101 @@ class MapsPageState extends State<MapsPage> {
       });
     });
   }
+
+
+  Future<void> updateEventParticipants(String markerName, List<Map<String, String>> participants, String dateEvent, String startTimeEvent) async {
+    try {
+      DocumentReference docRef = FirebaseFirestore.instance.collection('events').doc(markerName);
+      print(docRef);
+
+      // Получите данные документа "Black Pool"
+      DocumentSnapshot docSnapshot = await docRef.get();
+
+      Map<String, dynamic>? data = docSnapshot.data() as Map<String, dynamic>?;
+
+      if (data != null) {
+        // Извлеките поле "events" (которое является массивом)
+        List<dynamic> events = (data['events'] as List<dynamic>);
+        print(events);
+
+        // Найдите событие по dateEvent и startTimeEvent
+        for (int i = 0; i < events.length; i++) {
+          Map<String, dynamic> event = events[i];
+          if (event['dateEvent'] == dateEvent && event['startTimeEvent'] == startTimeEvent) {
+            // Если событие найдено, обновите его "participants"
+            events[i]['participants'] = FieldValue.arrayUnion(participants);
+            break;
+          }
+        }
+
+        // Обновите документ с обновленным массивом "events"
+        await docRef.update({'events': events});
+
+        print('Данные успешно обновлены');
+      } else {
+        print('Документ не найден');
+      }
+    } catch (error) {
+      print('Произошла ошибка: $error');
+    }
+  }
+
+  bool isCurrentUserParticipant(List<dynamic> participants, String currentUserId) {
+    for (var participant in participants) {
+      if (participant['uid'] == currentUserId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> joinEvent(String markerName, String dateEvent, String startTimeEvent, String currentUserId, String firstNameParticipant,String organizerUid) async {
+    try {
+      DocumentReference docRef = FirebaseFirestore.instance.collection('events').doc(markerName);
+
+      // Получите данные документа
+      DocumentSnapshot docSnapshot = await docRef.get();
+      Map<String, dynamic>? eventData = docSnapshot.data() as Map<String, dynamic>?;
+
+      if (eventData != null) {
+        // Извлеките поле "events" (которое является массивом)
+        List<dynamic> events = eventData['events'] as List<dynamic>;
+
+        print(events);
+        // Найдите событие по dateEvent и startTimeEvent
+        for (int i = 0; i < events.length; i++) {
+          Map<String, dynamic> event = events[i] as Map<String, dynamic>;
+          if (event['dateEvent'] == dateEvent && event['startTimeEvent'] == startTimeEvent && event['uid'] == organizerUid) {
+            // Найдено событие, добавьте нового участника
+            List<dynamic> participants = event['participants'] as List<dynamic>;
+            participants.add({'uid': currentUserId, 'firstName': firstNameParticipant});
+
+            // Обновите только конкретное событие
+            events[i]['participants'] = participants;
+            await docRef.update({'events': events});
+
+            print('Участник успешно добавлен к событию');
+            return;
+          }
+        }
+      }
+
+      print('Событие не найдено');
+    } catch (error) {
+      print('Произошла ошибка: $error');
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -879,23 +1088,26 @@ class MapsPageState extends State<MapsPage> {
           ),
         ],
         currentIndex: _currentIndex,
-        onTap: (int index) {
+        onTap: (int index) async {
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          String userId = prefs.getString('uid').toString();
+          print('My user $userId');
           if (index == 0) {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => ProfileScreen(userId: widget.userId),
+                builder: (context) => ProfileScreen(userId: userId),
               ),
             );
           } else if (index == 1) {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => MapsPage(userId: widget.userId),
+                builder: (context) => MapsPage(userId: userId),
               ),
             );
           } else if (index == 2) {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => EmptyScreen(),
+                builder: (context) => EventsList(userId: userId),
               ),
             );
           }
@@ -939,9 +1151,103 @@ class MapsPageState extends State<MapsPage> {
   }
 }
 
-class Event {
+
+
+class ParticipantsDialog extends StatelessWidget {
+  final List<Map<String, String>> participants;
+  final String organizerUid;
+  final String currentUserUid; // UID текущего пользователя
+
+  ParticipantsDialog({
+    required this.participants,
+    required this.organizerUid,
+    required this.currentUserUid,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Подсчитываем высоту контейнера в зависимости от количества участников
+    final containerHeight = participants.length * 100.0;
+
+    return AlertDialog(
+      title: Text('Список участников'),
+      content: Container(
+        width: double.maxFinite,
+        height: containerHeight > 400.0 ? 400.0 : containerHeight,
+        // Используем SingleChildScrollView для прокрутки, если участников много
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              ListView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                itemCount: participants.length,
+                itemBuilder: (context, index) {
+                  final participant = participants[index];
+                  final uid = participant['uid'];
+                  final firstName = participant['firstName'];
+                  final isOrganizer = (uid == organizerUid);
+
+                  // Проверка, является ли текущий пользователь организатором
+                  final isCurrentUserOrganizer = (uid == currentUserUid);
+
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: isOrganizer ? Colors.green : Colors.grey,
+                      child: Text(
+                        firstName!.substring(0, 1),
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    title: Text(firstName),
+                    subtitle: isOrganizer ? Text('Организатор') : Text('Участник'),
+                    // Добавляем PopupMenuItem для "Посмотреть профиль"
+                    trailing: isCurrentUserOrganizer
+                        ? null
+                        : PopupMenuButton<String>(
+                      onSelected: (String choice) {
+                        if (choice == 'viewProfile') {
+                          // Вызов функции для просмотра профиля участника
+                          print('test');
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => ViewProfileScreen(userId: uid as String)),
+                          );
+                        }
+                      },
+                      itemBuilder: (BuildContext context) {
+                        return <PopupMenuEntry<String>>[
+                          PopupMenuItem<String>(
+                            value: 'viewProfile',
+                            child: ListTile(
+                              title: Text('Посмотреть профиль'),
+                              subtitle: Text(firstName),
+                            ),
+                          ),
+                        ];
+                      },
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: Text('Закрыть'),
+        ),
+      ],
+    );
+  }
 
 }
+
+
 
 
 

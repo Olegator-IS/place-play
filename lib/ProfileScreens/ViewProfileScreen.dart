@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:image_picker/image_picker.dart';
 import 'package:placeandplay/EmptyScreen.dart';
+import 'package:placeandplay/Events/EventsList.dart';
 import 'package:placeandplay/ProfileScreens/EditProfileScreen.dart';
 import 'package:placeandplay/WelcomeScreens/IntroSlides.dart';
 import 'package:placeandplay/WelcomeScreens/LoginPage.dart';
@@ -14,17 +15,17 @@ import 'dart:ui' as ui;
 
 
 
-import '../Events/EventsList.dart';
 import '../MapScreens/MapsPage.dart';
 import 'AvatarViewScreen.dart';
+import 'ProfileScreen.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ViewProfileScreen extends StatefulWidget {
   final String userId;
 
-  ProfileScreen({required this.userId});
+  ViewProfileScreen({required this.userId});
 
   @override
-  _ProfileScreenState createState() => _ProfileScreenState();
+  _ViewProfileScreenState createState() => _ViewProfileScreenState();
 
 }
 
@@ -39,9 +40,9 @@ class ProfileTitle extends StatelessWidget {
         ),
         SizedBox(width: 20.0),
         Text(
-          'Профиль',
+          'Просмотр пользователя',
           style: TextStyle(
-            fontSize: 24.0,
+            fontSize: 20.0,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
@@ -51,11 +52,12 @@ class ProfileTitle extends StatelessWidget {
   }
 }
 
-class _ProfileScreenState extends State<ProfileScreen>
+class _ViewProfileScreenState extends State<ViewProfileScreen>
     with SingleTickerProviderStateMixin {
-
   final audioCache = AudioCache();
   final audioFilePath = 'audio/swipe.mp3'; // Путь к вашему аудиофайлу в папке assets
+
+
   int _currentIndex = 0;
   DocumentSnapshot? userDataSnapshot;
   String? avatarURL;
@@ -94,87 +96,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       }
     });
   }
-  String calculateProfileCompletion(Map<String, dynamic> userProfile) {
-    final totalFields = 17; // Общее количество полей профиля
 
-    int filledFields = 0;
-
-    // Подсчитайте, сколько полей заполнено в профиле пользователя
-    if (userProfile['activity'] != null && userProfile['activity'] != '') {
-      filledFields++;
-    }
-    if (userProfile['age'] != null && userProfile['age'] != '') {
-      filledFields++;
-    }
-    // Повторите это для всех остальных полей
-    if (userProfile['bio'] != null && userProfile['bio'] != '') {
-      filledFields++;
-    }
-    // Повторите это для всех остальных полей
-    if (userProfile['birthday'] != null && userProfile['birthday'] != '') {
-      filledFields++;
-    }
-    // Повторите это для всех остальных полей
-    if (userProfile['lastName'] != null && userProfile['lastName'] != '') {
-      filledFields++;
-    }
-    // Повторите это для всех остальных полей
-    if (userProfile['communicationPreferences'] != null && userProfile['communicationPreferences'] != '') {
-      filledFields++;
-    }
-    // Повторите это для всех остальных полей
-    if (userProfile['familyStatus'] != null && userProfile['familyStatus'] != '') {
-      filledFields++;
-    }
-    // Повторите это для всех остальных полей
-    if (userProfile['firstName'] != null && userProfile['firstName'] != '') {
-      filledFields++;
-    }
-    // Повторите это для всех остальных полей
-    if (userProfile['gamesInterests'] != null && userProfile['gamesInterests'] != '') {
-      filledFields++;
-    }
-    // Повторите это для всех остальных полей
-    if (userProfile['gender'] != null && userProfile['gender'] != '') {
-      filledFields++;
-    }
-    // Повторите это для всех остальных полей
-    if (userProfile['lastName'] != null && userProfile['lastName'] != '') {
-      filledFields++;
-    }
-    // Повторите это для всех остальных полей
-    if (userProfile['lastName'] != null && userProfile['lastName'] != '') {
-      filledFields++;
-    }
-    // Повторите это для всех остальных полей
-    if (userProfile['location'] != null && userProfile['location'] != '') {
-      filledFields++;
-    }
-    // Повторите это для всех остальных полей
-    if (userProfile['meetingPreferences'] != null && userProfile['meetingPreferences'] != '') {
-      filledFields++;
-    }
-    // Повторите это для всех остальных полей
-    if (userProfile['opennessController'] != null && userProfile['opennessController'] != '') {
-      filledFields++;
-    }
-    // Повторите это для всех остальных полей
-    if (userProfile['partnerPreferences'] != null && userProfile['partnerPreferences'] != '') {
-      filledFields++;
-    }
-    if (userProfile['skillLevels'] != null && userProfile['skillLevels'] != '') {
-      filledFields++;
-    }
-
-    // Рассчитайте процент заполненных полей
-    final completionPercentage = double.parse(((filledFields / totalFields) * 100).toStringAsFixed(0));
-
-    if (completionPercentage < 100) {
-      return 'Уважаемый ${userProfile['firstName']}, ваш профиль не имеет полной информации и заполнен на $completionPercentage%. Пожалуйста,заполните все поля.';
-    } else {
-      return ''; // Если профиль полностью заполнен, верните пустую строку
-    }
-  }
 
   void _toggleInterests() {
     if (userDataSnapshot != null) {
@@ -313,25 +235,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                   },
                   child: Text('Закрыть'),
                 ),
-                ElevatedButton(
-                  onPressed: _isLoading
-                      ? null
-                      : () async {
-                    Navigator.of(context).pop();
-                    await _pickImage(context);
-                  },
-                  child: _isLoading
-                      ? CircularProgressIndicator() // Анимация при входе
-                      : Text('Изменить фотографию'),
-                  style: ElevatedButton.styleFrom(
-                    primary: Colors.blue,
-                    onPrimary: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -360,7 +263,6 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Future<void> _loadUserData() async {
     try {
-
       _playSound();
       // Выполните запрос к базе данных или получите данные заново
       final snapshot = await FirebaseFirestore.instance.collection('userProfiles').doc(widget.userId).get();
@@ -419,10 +321,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               userDataSnapshot = snapshot.data; // Установите userDataSnapshot
               final userData = snapshot.data!.data() as Map<String, dynamic>;
-              final profileCompletionNotification = calculateProfileCompletion(userData);
-
               print('lohhh');
-              print(profileCompletionNotification);
               final firstName = userData['firstName'] as String;
               final lastName = userData['lastName'] as String;
               final age = userData['age'] as String ?? 'Не указан';
@@ -454,25 +353,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                       },
                       child: RotationTransition(
                         turns: _rotationAnimation,
-                        child: Container(
-                          width: MediaQuery.of(context).size.width,
-                          decoration: BoxDecoration(
-                            image: DecorationImage(
-                              image: AssetImage('assets/images/testimage.png'),
-                              fit: BoxFit.fitWidth,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            CircleAvatar(
+                              radius: 100,
+                              backgroundImage:
+                              avatarImageProvider ?? defaultAvatarImageProvider,
                             ),
-                          ),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              CircleAvatar(
-                                radius: 100,
-                                backgroundImage: avatarImageProvider ?? defaultAvatarImageProvider,
-                                backgroundColor: Colors.transparent,
-                              ),
-                              if (_isLoading) CircularProgressIndicator(),
-                            ],
-                          ),
+                            if (_isLoading) CircularProgressIndicator(),
+                          ],
                         ),
                       ),
                     ),
@@ -585,16 +475,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
 
-                    SizedBox(height: 20.0),
-                    if (profileCompletionNotification.isNotEmpty)
-                      Text(
-                        profileCompletionNotification,
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold// Цвет текста для уведомления
-                        ),
-                      ),
+
 
                     ElevatedButton(
                       onPressed: () {
@@ -808,31 +689,6 @@ class _ProfileScreenState extends State<ProfileScreen>
 
                       ],
                     ),
-                    SizedBox(height: 20.0),
-                    ElevatedButton(
-                      onPressed: () {
-                        _editProfile();
-                        // Здесь добавьте действие при нажатии на кнопку "Изменить информацию о себе"
-                        // Например, можно открыть экран редактирования профиля
-                      },
-                      style: ElevatedButton.styleFrom(
-                        primary: Colors.green, // Цвет фона кнопки
-                        onPrimary: Colors.white, // Цвет текста на кнопке
-                        padding: EdgeInsets.all(16), // Отступы внутри кнопки
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10), // Скругленные углы кнопки
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.edit), // Иконка для редактирования
-                          SizedBox(width: 8), // Расстояние между иконкой и текстом
-                          Text('Изменить информацию о себе'), // Текст кнопки
-                        ],
-                      ),
-                    ),
-
                   ],
                 ),
               );
@@ -845,7 +701,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         items: [
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
-            label: 'Профиль',
+            label: 'Ваш профиль',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.map),
@@ -858,24 +714,27 @@ class _ProfileScreenState extends State<ProfileScreen>
 
         ],
         currentIndex: _currentIndex, // Устанавливайте индекс текущей вкладки
-        onTap: (int index) {
+        onTap: (int index) async {
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          print('LOOOOOOOOOOOOH12345');
+          print(prefs.getString('uid').toString());
           if (index == 0) {
             // Пользователь выбрал вкладку "Карта", перенаправляем его на пустую страницу
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => ProfileScreen(userId: widget.userId),
+                builder: (context) => ProfileScreen(userId: prefs.getString('uid').toString()),
               ),
             );
           } else if(index == 1){
           Navigator.of(context).push(
             MaterialPageRoute(
-                builder: (context) => MapsPage(userId: widget.userId),
+                builder: (context) => MapsPage(userId: prefs.getString('uid').toString()),
               ),
             );
           }else if(index == 2){
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => EventsList(userId: widget.userId),
+                builder: (context) => EventsList(userId: prefs.getString('uid').toString()),
               ),
             );
           }
@@ -890,26 +749,14 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  void _editProfile() {
-    // Здесь перенаправьте пользователя на экран редактирования профиля
-    // Например, используйте Navigator.push для открытия нового экрана
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        // builder: (context) => EmptyScreen(userId: widget.userId),
-        builder: (context) => EditProfileScreen(userId: widget.userId),
 
-      ),
-    );
-  }
 }
 
 
 
 
 
-Future<void> main(userId) async {
-  print('beginnnnnnnnnnnnnnnnnnnnnnnnnnnnnn');
+void main(userId) {
   runApp(MaterialApp(
     home: ProfileScreen(userId: userId),
   ));

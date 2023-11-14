@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 
 class EventCreationForm extends StatefulWidget {
   final String organizer;
@@ -20,6 +21,7 @@ class EventCreationForm extends StatefulWidget {
 }
 
 class EventData {
+  final String eventId;
   final String firstName;
   final String dateEvent;
   final String startTimeEvent;
@@ -31,6 +33,7 @@ class EventData {
 
 
   EventData({
+    required this.eventId,
   required this.firstName,
   required this.dateEvent,
   required this.startTimeEvent,
@@ -43,20 +46,24 @@ class EventData {
 
 Map<String, dynamic> toJson() {
   return {
-    'firstName': firstName,
+    'eventId': eventId,
+    'eventName': firstName,
     'dateEvent': dateEvent,
     'startTimeEvent': startTimeEvent,
     'organizer': organizer,
     'type': type,
     'uid': uid,
     'participants':participants,
+    'isRegistered':false,
   };
 }
 }
 
 class _EventCreationFormState extends State<EventCreationForm> {
+  // final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+  // FlutterLocalNotificationsPlugin();
   List<EventData> events = []; // Создайте список событий
-
+  late String eventId;
   late DateTime selectedDate;
   late TimeOfDay startTime;
   late TimeOfDay endTime;
@@ -71,6 +78,7 @@ class _EventCreationFormState extends State<EventCreationForm> {
   @override
   void initState() {
     super.initState();
+    // initializeNotifications();
     selectedDate = DateTime.now();
     startTime = TimeOfDay.now();
     endTime = TimeOfDay.now();
@@ -94,6 +102,40 @@ class _EventCreationFormState extends State<EventCreationForm> {
     }
   }
 
+  // Future<void> initializeNotifications() async {
+  //   const AndroidInitializationSettings initializationSettingsAndroid =
+  //   AndroidInitializationSettings('app_icon');
+  //
+  //   final InitializationSettings initializationSettings =
+  //   InitializationSettings(android: initializationSettingsAndroid);
+  //
+  //   await flutterLocalNotificationsPlugin.initialize(
+  //     initializationSettings,
+  //   );
+  // }
+
+  // Future<void> showNotification() async {
+  //   const AndroidNotificationDetails androidPlatformChannelSpecifics =
+  //   AndroidNotificationDetails(
+  //     'your_channel_id', // Замените на свой уникальный ID канала
+  //     'Your Channel Name',
+  //     importance: Importance.max,
+  //     priority: Priority.high,
+  //   );
+
+  //   const NotificationDetails platformChannelSpecifics =
+  //   NotificationDetails(android: androidPlatformChannelSpecifics);
+  //
+  //   await flutterLocalNotificationsPlugin.show(
+  //     0, // Уникальный ID уведомления
+  //     'Уведомление', // Заголовок уведомления
+  //     'Ваше событие успешно создано!', // Текст уведомления
+  //     platformChannelSpecifics,
+  //     payload: 'item x',
+  //   );
+  // }
+
+
   Future<void> _refreshData() async {
     await _loadUserData();
 
@@ -107,6 +149,8 @@ class _EventCreationFormState extends State<EventCreationForm> {
 
     final docRef = collection.doc(documentName);
     final docSnapshot = await docRef.get();
+    eventId = docRef.id;
+
 
     if (docSnapshot.exists) {
       // Документ существует, обновляем массив в нем
@@ -119,8 +163,13 @@ class _EventCreationFormState extends State<EventCreationForm> {
         'events': [event.toJson()],
       });
     }
+    // showNotification();
   }
 
+  String generateEventId() {
+    var uuid = Uuid();
+    return uuid.v4(); // Генерация версии 4 UUID
+  }
 
 
   @override
@@ -228,15 +277,15 @@ class _EventCreationFormState extends State<EventCreationForm> {
                 style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold)),
-            CheckboxListTile(
-              title: const Text('Заведение уже забронировано'),
-              value: isBooked,
-              onChanged: (value) {
-                setState(() {
-                  isBooked = value ?? false;
-                });
-              },
-            ),
+            // CheckboxListTile(
+            //   title: const Text('Заведение уже забронировано'),
+            //   value: isBooked,
+            //   onChanged: (value) {
+            //     setState(() {
+            //       isBooked = value ?? false;
+            //     });
+            //   },
+            // ),
           ],
         ),
       ),
@@ -284,28 +333,36 @@ class _EventCreationFormState extends State<EventCreationForm> {
               return; // Остановка выполнения кода
             }
 
-            if (!isBooked) {
-              // Проверка, был ли выбран чекбокс "Заведение уже забронировано"
-              showDialog(
-                  context: context,
-                  builder: (context) {
-                    return AlertDialog(
-                      title: const Text('Подтвердите бронирование'),
-                      content: Text('Пожалуйста свяжитесь по контактным номерам и забронируйте место!\n\nНе забудьте сообщить что вы бронируете через PlaceAndPlay! ;) \n\n${widget.phoneNumber}\n\n${widget.name}'),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                          child: const Text('OK'),
-                        ),
-                      ],
-                    );
-                  });
-              return; // Остановка выполнения кода
-            }
+            // if (!isBooked) {
+            //   // Проверка, был ли выбран чекбокс "Заведение уже забронировано"
+            //   showDialog(
+            //       context: context,
+            //       builder: (context) {
+            //         return AlertDialog(
+            //           title: const Text('Подтвердите бронирование'),
+            //           content: Text('Пожалуйста свяжитесь по контактным номерам и забронируйте место!\n\nНе забудьте сообщить что вы бронируете через PlaceAndPlay! ;) \n\n${widget.phoneNumber}\n\n${widget.name}'),
+            //           actions: [
+            //             TextButton(
+            //               onPressed: () {
+            //                 Navigator.of(context).pop();
+            //               },
+            //               child: const Text('OK'),
+            //             ),
+            //           ],
+            //         );
+            //       });
+            //   return; // Остановка выполнения кода
+            // }
             // Создайте экземпляр EventData с данными из формы
+
+            DateTime now = DateTime.now();
+            String formattedDate = DateFormat('yyyyMMdd').format(now);
+            String eventName = widget.name; // Замените на фактический способ получения имени мероприятия
+            String generatedUUID = generateEventId();
+            String eventId = '$eventName-$generatedUUID';
+
             EventData newEvent = EventData(
+              eventId: eventId,
               firstName: widget.name,
               dateEvent: _eventDateController.text,
               startTimeEvent: _eventTimeBeginController.text,
@@ -330,26 +387,44 @@ class _EventCreationFormState extends State<EventCreationForm> {
                   context: context,
                   builder: (context) {
                     return AlertDialog(
-                      title: const Text('Успешно', style: TextStyle(color: Colors.red, fontSize: 24)), // Заголовок красного цвета
+                      title: const Text('Успешно', style: TextStyle(color: Colors.orange, fontSize: 24)), // Заголовок красного цвета
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
+
                           Text(
-                            'Ваша игра в ${widget.activityType} состоится!',
-                            style: const TextStyle(fontSize: 20),
-                          ),
-                          Text(
-                                '\n${widget.name}\n\n${_eventTimeBeginController.text}\n\n${widget.address}',
+                            'Ожидайте участников или пригласите своих друзей!',
                             style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 30.0,
+                              color: Colors.green,
+                              fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const Text(
-                            '\nПросим прибыть на место чуточку раньше.\n\nУдачной игры!', // Текст поздравления
-                            style: TextStyle(fontSize: 18),
+// Text(
+//   '\n${widget.name}\n\n Ориентировочное время мероприятия: \n ${_eventTimeBeginController.text}\n\n${widget.address}',
+//   style: const TextStyle(
+//     color: Colors.black,
+//     fontSize: 30.0,
+//     fontWeight: FontWeight.bold,
+//   ),
+// ),
+                          Text(
+                            '\nВаша игра в ${widget.activityType}\nне является зарегистрированным мероприятием. \n\n',
+                            style: TextStyle(
+                              fontSize: 22,
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
+                          Text(
+                            'Для регистрации выполните следующие шаги: \nОткройте вкладку "События" - Выберите текущее мероприятие - Подтвердите бронирование!',
+                            style: TextStyle(
+                              fontSize: 21,
+                              color: Colors.blue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
                         ],
                       ),
                       actions: [
