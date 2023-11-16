@@ -44,6 +44,8 @@ class EventData {
     required this.participants,
 });
 
+
+
 Map<String, dynamic> toJson() {
   return {
     'eventId': eventId,
@@ -59,10 +61,53 @@ Map<String, dynamic> toJson() {
 }
 }
 
+
+class EventDataWithOut {
+  final String eventId;
+  final String firstName;
+  final String dateEvent;
+  final String startTimeEvent;
+  final String organizer;
+  final String type;
+  final String address;
+  final String uid;
+  final List<Map<String, String>> participants;
+
+
+  EventDataWithOut({
+    required this.eventId,
+    required this.firstName,
+    required this.dateEvent,
+    required this.startTimeEvent,
+    required this.organizer,
+    required this.type,
+    required this.address,
+    required this.uid,
+    required this.participants,
+  });
+
+
+
+  Map<String, dynamic> toJson() {
+    return {
+      'eventId': eventId,
+      'eventName': firstName,
+      'dateEvent': dateEvent,
+      'startTimeEvent': startTimeEvent,
+      'organizer': organizer,
+      'type': type,
+      'uid': uid,
+      'isRegistered':false,
+      'participants':[],
+    };
+  }
+}
+
 class _EventCreationFormState extends State<EventCreationForm> {
   // final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
   // FlutterLocalNotificationsPlugin();
-  List<EventData> events = []; // Создайте список событий
+  List<EventData> events = [];
+  List<EventDataWithOut> eventsWithOut = [];// Создайте список событий
   late String eventId;
   late DateTime selectedDate;
   late TimeOfDay startTime;
@@ -144,6 +189,29 @@ class _EventCreationFormState extends State<EventCreationForm> {
   }
 
   Future<void> addOrUpdateEvent(EventData event, String name) async {
+    final collection = FirebaseFirestore.instance.collection('events');
+    final documentName = name; // Имя документа
+
+    final docRef = collection.doc(documentName);
+    final docSnapshot = await docRef.get();
+    eventId = docRef.id;
+
+
+    if (docSnapshot.exists) {
+      // Документ существует, обновляем массив в нем
+      await docRef.update({
+        'events': FieldValue.arrayUnion([event.toJson()]),
+      });
+    } else {
+      // Документ не существует, создаем новый с массивом
+      await docRef.set({
+        'events': [event.toJson()],
+      });
+    }
+    // showNotification();
+  }
+
+  Future<void> addOrUpdateEventWithOut(EventDataWithOut event, String name) async {
     final collection = FirebaseFirestore.instance.collection('events');
     final documentName = name; // Имя документа
 
@@ -277,15 +345,15 @@ class _EventCreationFormState extends State<EventCreationForm> {
                 style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold)),
-            // CheckboxListTile(
-            //   title: const Text('Заведение уже забронировано'),
-            //   value: isBooked,
-            //   onChanged: (value) {
-            //     setState(() {
-            //       isBooked = value ?? false;
-            //     });
-            //   },
-            // ),
+            CheckboxListTile(
+              title: const Text('Зарегистрироваться как участник тоже?'),
+              value: isBooked,
+              onChanged: (value) {
+                setState(() {
+                  isBooked = value ?? false;
+                });
+              },
+            ),
           ],
         ),
       ),
@@ -372,14 +440,42 @@ class _EventCreationFormState extends State<EventCreationForm> {
               uid: widget.userId, participants: [{'uid': widget.userId.toString(), 'firstName': widget.firstName.toString()}],
             );
 
+
+            EventDataWithOut eventWithoutParticipant = EventDataWithOut(
+              eventId: eventId,
+              firstName: widget.name,
+              dateEvent: _eventDateController.text,
+              startTimeEvent: _eventTimeBeginController.text,
+              organizer: widget.organizer,
+              type: widget.type,
+              address: widget.address,
+              uid: widget.userId,
+                participants: []
+            );
             // Добавьте новое событие в список
-            events.add(newEvent);
+
+
+
+            if(isBooked){
+              events.add(newEvent);
+              addOrUpdateEvent(newEvent,widget.name);
+            }else{
+              eventsWithOut.add(eventWithoutParticipant);
+              addOrUpdateEventWithOut(eventWithoutParticipant,widget.name);
+            }
+
+
+
+
+
 
             // Преобразуйте список событий в JSON формат
             final eventsJson = events.map((event) => event.toJson()).toList();
             final jsonData = {'events': eventsJson};
+            print(jsonData);
 
-            addOrUpdateEvent(newEvent,widget.name);
+
+
             // Очистите форму и закройте диалог
 
             Navigator.of(context).pop(); // Закрыть диалог

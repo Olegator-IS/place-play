@@ -379,7 +379,7 @@ class MapsPageState extends State<MapsPage> {
                                           : 'Выберите дату', // Отобразить "Выберите дату", если дата не выбрана
                                       style: TextStyle(color: Colors.black, fontSize: 18),
                                     );
-                                  final eventsList = eventData['events'] as List<dynamic>;
+                                    final eventsList = (eventData['events'] as List<dynamic>?) ?? [];
 
                                     // Создайте список виджетов для отображения данных о событиях
                                     List<Widget> eventWidgets = [];
@@ -392,7 +392,7 @@ class MapsPageState extends State<MapsPage> {
                                       final isRegistered = event['isRegistered'];
                                       final organizer = event['organizer'];
                                       final organizerUid = event['uid'];
-                                      final List<dynamic> participantsData = event['participants'];
+                                      final List<dynamic> participantsData = (event['participants'] as List<dynamic>?) ?? [];
                                       final List<Map<String, String>> participants = participantsData.map((participant) {
                                         final Map<String, dynamic> participantData = participant as Map<String, dynamic>;
 
