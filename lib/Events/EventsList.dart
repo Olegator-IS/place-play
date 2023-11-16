@@ -1,3 +1,4 @@
+import 'package:another_flushbar/flushbar.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:toggle_switch/toggle_switch.dart';
@@ -14,12 +15,9 @@ class EventsList extends StatefulWidget {
 }
 
 class _EventsListState extends State<EventsList> {
+  List<Map<String, dynamic>> eventsList = [];
 
-  void updateEventsList() {
-    setState(() {
-      // Empty function, nothing needs to be done here, just call setState
-    });
-  }
+
   int currentIndex = 0; // 0 for organizer, 1 for participant
   bool canEditEvent = false;
   String selectedFilter = 'all';
@@ -315,13 +313,13 @@ class _EventsListState extends State<EventsList> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => EventDetails(event: event,currentUserId: widget.userId,parentWidget: widget),
+                              builder: (context) => EventDetails(
+                                event: event,
+                                currentUserId: widget.userId,
+                                isOrganizer: currentIndex,
+                              ),
                             ),
                           );
-                          setState(() {
-                            // Обновите состояние списка участников в вашем виджете
-                            // Это нужно для перестройки UI с новыми данными
-                          });
                         },
                       );
 
@@ -342,18 +340,43 @@ class _EventsListState extends State<EventsList> {
 
 
 
-class EventDetails extends StatelessWidget {
+class EventDetails extends StatefulWidget  {
 
   final Map<String, dynamic> event;
   final String currentUserId;
-  final EventsList parentWidget;
+  final int isOrganizer;
 
 
   const EventDetails(
-      {Key? key, required this.event, required this.currentUserId, required this.parentWidget})
+      {Key? key, required this.event,required this.currentUserId,required this.isOrganizer})
       : super(key: key);
 
 
+
+
+  @override
+  _EventDetailsState createState() => _EventDetailsState();
+}
+
+class _EventDetailsState extends State<EventDetails> {
+
+  List<Map<String, dynamic>> fetchOrganizerEvents(
+      QuerySnapshot<Map<String, dynamic>> snapshot) {
+    List<Map<String, dynamic>> organizerEvents = [];
+
+    snapshot.docs.forEach((doc) {
+      List<Map<String, dynamic>> eventsList =
+      List<Map<String, dynamic>>.from(doc.data()!['events']);
+      organizerEvents.addAll(
+        eventsList.where((event) => event['uid'] == currentUserId),
+      );
+    });
+
+    return organizerEvents;
+  }
+  Map<String, dynamic> get event => widget.event;
+  String get currentUserId => widget.currentUserId;
+  int get isOrganizer => widget.isOrganizer;
 
   @override
   Widget build(BuildContext context) {
@@ -403,8 +426,8 @@ class EventDetails extends StatelessWidget {
                       return GestureDetector(
                         onLongPress: () {
                           _showContextMenu(
-                              context, event['participants'][index],
-                              currentUserId);
+                              context, event['participants'][index],event['uid'],
+                              currentUserId,isOrganizer,event);
                         },
                         child: ListTile(
                           title: Text(
@@ -424,84 +447,82 @@ class EventDetails extends StatelessWidget {
     );
   }
 
-
-  void _showContextMenu(BuildContext context, dynamic participant,
-      String currentUserId) {
+  void _showContextMenu(BuildContext context, dynamic participant, String currentUserId,dynamic event,int currentIndex,dynamic eventList) {
+    print(eventList);
+    print('isOrganizer$isOrganizer');
     // Показать контекстное меню
+    print('test $event');
+    print(participant['uid']);
+    print(currentUserId);
     showModalBottomSheet(
       context: context,
       builder: (BuildContext builder) {
+
+
         List<Widget> menuItems = [
           ListTile(
-            title: Text('Участник: ${participant['firstName']}'),
+            title: Text('Выбранный участник - ${participant['firstName']}'),
           ),
         ];
 
-        // Добавьте "Посмотреть профиль" только если UID участника не совпадает с UID текущего пользователя
         if (participant['uid'] != currentUserId) {
+          // Добавьте "Посмотреть профиль" только если UID участника не совпадает с UID текущего пользователя
           menuItems.add(
             ListTile(
               title: Text('Посмотреть профиль'),
               onTap: () {
                 _viewProfile(context, participant);
-                Navigator.pop(context);
               },
             ),
           );
+
+          if (isOrganizer == 0) {
+            // Если выбран организатор, добавьте дополнительные параметры
+            menuItems.addAll([
+              ListTile(
+                title: Text('Удалить участника из события'),
+                onTap: () {
+                  _removeParticipant(context,participant,eventList);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text('Назначить организатором'),
+                onTap: () {
+                  // _assignOrganizer(participant);
+                  Navigator.pop(context);
+                },
+              ),
+            ]);
+          }
+        }else{
+          menuItems.addAll([
+            ListTile(
+              title: Text('Это организатор.\nОн может удалять/назначать других пользователей организатором'),
+            ),
+            ListTile(
+              title: Text('Посмотреть профиль'),
+              onTap: () {
+                _viewProfile(context, participant);
+              },
+            ),
+          ]);
         }
 
         // Добавьте остальные пункты меню
         menuItems.addAll([
-          ListTile(
-            title: Text('Удалить участника из события'),
-            onTap: () {
-              _removeParticipant(participant, event);
-              showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                return Center(
-                  child: AlertDialog(
-                    title: Text('Участник удален'),
-                    content: Text('${participant['firstName']} удален из списка участников'),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: Text('OK'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-        );
-            },
-          ),
-          ListTile(
-            title: Text('Добавить в друзья'),
-            onTap: () {
-              // _addToFriends(participant);
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            title: Text('Назначить организатором'),
-            onTap: () {
-              // _assignOrganizer(participant);
-              Navigator.pop(context);
-            },
-          ),
+          // ... other menu items ...
         ]);
 
         return Container(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: menuItems,
           ),
         );
       },
     );
   }
-
 
   void _viewProfile(BuildContext context, dynamic participant) {
     String uid = participant['uid'];
@@ -514,8 +535,8 @@ class EventDetails extends StatelessWidget {
     );
   }
 
+  void _removeParticipant(BuildContext context,dynamic participant, Map<String, dynamic> event) async {
 
-  Future<void> _removeParticipant(dynamic participant, Map<String, dynamic> event) async {
     String participantUid = participant['uid'];
     String eventId = event['eventId'];
     String eventName = event['eventName'];
@@ -543,10 +564,16 @@ class EventDetails extends StatelessWidget {
       if (indexOfEvent != -1) {
         events[indexOfEvent]['participants'] = updatedParticipants;
 
+        print('updatedParticipants $updatedParticipants');
+
         // Обновление документа с обновленным массивом "events"
         await FirebaseFirestore.instance.collection('events')
             .doc(eventName)
             .update({'events': events});
+
+
+
+
 
 
       }
@@ -554,13 +581,47 @@ class EventDetails extends StatelessWidget {
     }
 
 
-
+    showCenteredNotification(context, '${participant['firstName']} удален из списка участников');
+    setState(() {
+      event['participants'] = updatedParticipants;
+    });
   }
 
 
 
 
 
+  void showCenteredNotification(BuildContext context, String message) {
+    OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).size.height / 2 - 25.0,
+        width: MediaQuery.of(context).size.width,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            alignment: Alignment.center,
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  message,
+                  style: TextStyle(fontSize: 16.0,fontWeight: FontWeight.bold,color: Colors.red),
+
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(overlayEntry);
+    Future.delayed(Duration(seconds: 3), () {
+      overlayEntry.remove();
+    });
+  }
 }
 
 
