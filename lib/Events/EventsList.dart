@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:toggle_switch/toggle_switch.dart';
 
+import '../ProfileScreens/ViewProfileScreen.dart';
+
 class EventsList extends StatefulWidget {
   final String userId;
 
@@ -12,6 +14,12 @@ class EventsList extends StatefulWidget {
 }
 
 class _EventsListState extends State<EventsList> {
+
+  void updateEventsList() {
+    setState(() {
+      // Empty function, nothing needs to be done here, just call setState
+    });
+  }
   int currentIndex = 0; // 0 for organizer, 1 for participant
   bool canEditEvent = false;
   String selectedFilter = 'all';
@@ -74,9 +82,19 @@ class _EventsListState extends State<EventsList> {
   }
 
 
+  void _viewProfile(dynamic participant) {
+    String uid = participant['uid']; // Получите uid участника
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ViewProfileScreen(userId: uid),
+      ),
+    );
+  }
 
-
-
+  void _addToFriends(dynamic participant) {
+    print('Добавлен в друзья: ${participant['firstName']}');
+  }
 
 
   @override
@@ -230,6 +248,38 @@ class _EventsListState extends State<EventsList> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
+                            SizedBox(height: 12),
+                            Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    // Ваш код для открытия обсуждения
+                                    // Например, Navigator.push(...);
+                                    print('Открыть обсуждение');
+                                  },
+                                  child: Icon(
+                                    Icons.chat, // Иконка обсуждения
+                                    size: 50.0, // Размер иконки
+                                  ),
+                                ),
+                                SizedBox(width: 8), // Расстояние между иконкой и текстом
+                                GestureDetector(
+                                  onTap: () {
+                                    // Ваш код для открытия обсуждения
+                                    // Например, Navigator.push(...);
+                                    print('Открыть обсуждение');
+                                  },
+                                  child: Text(
+                                    'Перейти в чат', // Текст рядом с иконкой
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      // Ваши стили для текста
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                         trailing: PopupMenuButton<String>(
@@ -265,9 +315,13 @@ class _EventsListState extends State<EventsList> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => EventDetails(event: event),
+                              builder: (context) => EventDetails(event: event,currentUserId: widget.userId,parentWidget: widget),
                             ),
                           );
+                          setState(() {
+                            // Обновите состояние списка участников в вашем виджете
+                            // Это нужно для перестройки UI с новыми данными
+                          });
                         },
                       );
 
@@ -285,10 +339,21 @@ class _EventsListState extends State<EventsList> {
   }
 }
 
-class EventDetails extends StatelessWidget {
-  final Map<String, dynamic> event;
 
-  const EventDetails({Key? key, required this.event}) : super(key: key);
+
+
+class EventDetails extends StatelessWidget {
+
+  final Map<String, dynamic> event;
+  final String currentUserId;
+  final EventsList parentWidget;
+
+
+  const EventDetails(
+      {Key? key, required this.event, required this.currentUserId, required this.parentWidget})
+      : super(key: key);
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -300,7 +365,7 @@ class EventDetails extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Card(
-          elevation: 5.0,  // Высота тени под боксом
+          elevation: 5.0, // Высота тени под боксом
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -315,6 +380,41 @@ class EventDetails extends StatelessWidget {
                   'Дата: ${event['dateEvent']}',
                   style: TextStyle(fontSize: 16.0),
                 ),
+                SizedBox(height: 16.0),
+                Text(
+                  'Участники:',
+                  style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8.0),
+                Container(
+                  height: event['participants'].length * 60.0,
+                  // 60.0 - предполагаемая высота каждого элемента
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    // Задайте цвет фона, который вы хотите использовать
+                    borderRadius: BorderRadius.circular(
+                        8.0), // Если хотите закругленные углы
+                  ),
+                  child: ListView.builder(
+                    padding: EdgeInsets.all(0.0),
+                    // Установите нужный вам внутренний отступ
+                    itemCount: event['participants'].length,
+                    itemBuilder: (context, index) {
+                      return GestureDetector(
+                        onLongPress: () {
+                          _showContextMenu(
+                              context, event['participants'][index],
+                              currentUserId);
+                        },
+                        child: ListTile(
+                          title: Text(
+                              'Имя участника: ${event['participants'][index]['firstName']}'),
+                          // Добавьте другие виджеты для отображения информации об участнике
+                        ),
+                      );
+                    },
+                  ),
+                ),
                 // Добавьте другие виджеты для отображения деталей события
               ],
             ),
@@ -324,4 +424,143 @@ class EventDetails extends StatelessWidget {
     );
   }
 
+
+  void _showContextMenu(BuildContext context, dynamic participant,
+      String currentUserId) {
+    // Показать контекстное меню
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext builder) {
+        List<Widget> menuItems = [
+          ListTile(
+            title: Text('Участник: ${participant['firstName']}'),
+          ),
+        ];
+
+        // Добавьте "Посмотреть профиль" только если UID участника не совпадает с UID текущего пользователя
+        if (participant['uid'] != currentUserId) {
+          menuItems.add(
+            ListTile(
+              title: Text('Посмотреть профиль'),
+              onTap: () {
+                _viewProfile(context, participant);
+                Navigator.pop(context);
+              },
+            ),
+          );
+        }
+
+        // Добавьте остальные пункты меню
+        menuItems.addAll([
+          ListTile(
+            title: Text('Удалить участника из события'),
+            onTap: () {
+              _removeParticipant(participant, event);
+              showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                return Center(
+                  child: AlertDialog(
+                    title: Text('Участник удален'),
+                    content: Text('${participant['firstName']} удален из списка участников'),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        child: Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+        );
+            },
+          ),
+          ListTile(
+            title: Text('Добавить в друзья'),
+            onTap: () {
+              // _addToFriends(participant);
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: Text('Назначить организатором'),
+            onTap: () {
+              // _assignOrganizer(participant);
+              Navigator.pop(context);
+            },
+          ),
+        ]);
+
+        return Container(
+          child: Column(
+            children: menuItems,
+          ),
+        );
+      },
+    );
+  }
+
+
+  void _viewProfile(BuildContext context, dynamic participant) {
+    String uid = participant['uid'];
+    print(uid);
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ViewProfileScreen(userId: uid),
+      ),
+    );
+  }
+
+
+  Future<void> _removeParticipant(dynamic participant, Map<String, dynamic> event) async {
+    String participantUid = participant['uid'];
+    String eventId = event['eventId'];
+    String eventName = event['eventName'];
+
+    // Создание обновленного списка участников без удаленного
+    List<dynamic> updatedParticipants = List.from(event['participants']);
+    updatedParticipants.removeWhere((p) => p['uid'] == participantUid);
+
+    DocumentSnapshot<Map<String, dynamic>> docSnapshot = await FirebaseFirestore.instance.collection('events')
+        .doc(eventName)
+        .get();
+
+    // Проверка, есть ли данные
+    if (docSnapshot.exists) {
+      // Получение текущих данных
+      Map<String, dynamic> data = docSnapshot.data()!;
+
+      // Получение текущего массива событий
+      List<dynamic> events = List.from(data['events']);
+
+      // Найдите событие по eventId
+      int indexOfEvent = events.indexWhere((event) => event['eventId'] == eventId);
+
+      // Если событие найдено, обновите его "participants"
+      if (indexOfEvent != -1) {
+        events[indexOfEvent]['participants'] = updatedParticipants;
+
+        // Обновление документа с обновленным массивом "events"
+        await FirebaseFirestore.instance.collection('events')
+            .doc(eventName)
+            .update({'events': events});
+
+
+      }
+
+    }
+
+
+
+  }
+
+
+
+
+
 }
+
+
