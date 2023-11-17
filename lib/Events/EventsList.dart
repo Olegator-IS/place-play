@@ -39,6 +39,15 @@ class _EventsListState extends State<EventsList> {
     return organizerEvents;
   }
 
+
+  void updateEventsList(Map<String, dynamic> updatedEvent, int currentIndex) {
+    setState(() {
+      // Обновление данных на основе нового события и индекса
+      // Например, если у вас есть список eventsList, то можно сделать следующим образом:
+      eventsList[currentIndex] = updatedEvent;
+    });
+  }
+
   List<Map<String, dynamic>> fetchParticipantEvents(
       QuerySnapshot<Map<String, dynamic>> snapshot) {
     List<Map<String, dynamic>> participantEvents = [];
@@ -317,6 +326,7 @@ class _EventsListState extends State<EventsList> {
                                 event: event,
                                 currentUserId: widget.userId,
                                 isOrganizer: currentIndex,
+                                isRegistered: event['isRegistered'],
                               ),
                             ),
                           );
@@ -345,10 +355,11 @@ class EventDetails extends StatefulWidget  {
   final Map<String, dynamic> event;
   final String currentUserId;
   final int isOrganizer;
+  final bool isRegistered;
 
 
   const EventDetails(
-      {Key? key, required this.event,required this.currentUserId,required this.isOrganizer})
+      {Key? key, required this.event,required this.currentUserId,required this.isOrganizer,required this.isRegistered})
       : super(key: key);
 
 
@@ -377,6 +388,75 @@ class _EventDetailsState extends State<EventDetails> {
   Map<String, dynamic> get event => widget.event;
   String get currentUserId => widget.currentUserId;
   int get isOrganizer => widget.isOrganizer;
+  bool get isRegistered => widget.isRegistered;
+
+
+
+
+  void confirmRegistration(Map<String, dynamic> event) async {
+    try {
+      String eventId = event['eventId'];
+      String eventName = event['eventName'];
+
+      // Создание обновленного списка участников без удаленного
+      DocumentSnapshot<Map<String, dynamic>> docSnapshot =
+      await FirebaseFirestore.instance.collection('events').doc(eventName).get();
+
+      // Проверка, есть ли данные
+      if (docSnapshot.exists) {
+        // Получение текущих данных
+        Map<String, dynamic> data = docSnapshot.data()!;
+
+        // Получение текущего массива событий
+        List<dynamic> events = List.from(data['events']);
+
+        // Найдите событие по eventId
+        int indexOfEvent = events.indexWhere((event) => event['eventId'] == eventId);
+
+        // Если событие найдено, обновите его "participants"
+        if (indexOfEvent != -1) {
+          events[indexOfEvent]['isRegistered'] = true;
+
+          // Обновление документа с обновленным массивом "events"
+          await FirebaseFirestore.instance.collection('events').doc(eventName).update({'events': events});
+        }
+      }
+      showCenteredNotification(context, 'Регистрация подтверждена успешно');
+
+      // Create a copy of the event with the modified isRegistered property
+      Map<String, dynamic> updatedEvent = Map.from(event);
+      updatedEvent['isRegistered'] = true;
+
+      // Update the UI by setting the state with the updated event
+      setState(() {
+        event = updatedEvent;
+      });
+    } catch (e) {
+      print('Ошибка при подтверждении регистрации: $e');
+      showCenteredNotification(context, 'Ошибка при подтверждении регистрации');
+    }
+  }
+
+
+  void cancelEvent(Map<String, dynamic> event) async {
+    try {
+      String eventId = event['eventId'];
+      String eventName = event['eventName'];
+
+      // Удаление события из базы данных
+      await FirebaseFirestore.instance.collection('events').doc(eventName).delete();
+
+      showCenteredNotification(context, 'Ивент успешно отменен');
+    } catch (e) {
+      print('Ошибка при отмене ивента: $e');
+      showCenteredNotification(context, 'Ошибка при отмене ивента');
+    }
+  }
+
+
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -388,7 +468,7 @@ class _EventDetailsState extends State<EventDetails> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Card(
-          elevation: 5.0, // Высота тени под боксом
+          elevation: 5.0,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -400,10 +480,15 @@ class _EventDetailsState extends State<EventDetails> {
                 ),
                 SizedBox(height: 8.0),
                 Text(
-                  'Дата: ${event['dateEvent']}',
-                  style: TextStyle(fontSize: 16.0),
+                  'Тип мероприятия: ${event['type']}',
+                  style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
                 ),
-                SizedBox(height: 16.0),
+                SizedBox(height: 8.0),
+                Text(
+                  'Дата: ${event['dateEvent']}',
+                  style:  TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8.0),
                 Text(
                   'Участники:',
                   style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
@@ -411,35 +496,98 @@ class _EventDetailsState extends State<EventDetails> {
                 SizedBox(height: 8.0),
                 Container(
                   height: event['participants'].length * 60.0,
-                  // 60.0 - предполагаемая высота каждого элемента
                   decoration: BoxDecoration(
                     color: Colors.grey[200],
-                    // Задайте цвет фона, который вы хотите использовать
-                    borderRadius: BorderRadius.circular(
-                        8.0), // Если хотите закругленные углы
+                    borderRadius: BorderRadius.circular(8.0),
                   ),
                   child: ListView.builder(
                     padding: EdgeInsets.all(0.0),
-                    // Установите нужный вам внутренний отступ
                     itemCount: event['participants'].length,
                     itemBuilder: (context, index) {
                       return GestureDetector(
                         onLongPress: () {
                           _showContextMenu(
-                              context, event['participants'][index],event['uid'],
-                              currentUserId,isOrganizer,event);
+                            context,
+                            event['participants'][index],
+                            event['uid'],
+                            currentUserId,
+                            isOrganizer,
+                            event,
+                            isRegistered,
+                          );
                         },
                         child: ListTile(
                           title: Text(
-                              'Имя участника: ${event['participants'][index]['firstName']}'),
-                          // Добавьте другие виджеты для отображения информации об участнике
+                            'Имя участника: ${event['participants'][index]['firstName']}',
+                          ),
                         ),
                       );
                     },
                   ),
                 ),
-                // Добавьте другие виджеты для отображения деталей события
+                SizedBox(height: 16.0),
+
+                Column(
+                  children: [
+                    Visibility(
+                      visible: isOrganizer == 0 && event['isRegistered'] == false,
+                      child: Container(
+                        margin: EdgeInsets.symmetric(vertical: 5.0),
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            confirmRegistration(event);
+
+                            setState(() {
+                              event['isRegistered'] = true;
+                            });
+
+                          },
+                          child: Text('Подтвердить регистрацию'),
+                        ),
+                      ),
+                    ),
+                    Visibility(
+                      visible: isOrganizer == 0 && event['isRegistered'] == false,
+                      child: Container(
+                        margin: EdgeInsets.symmetric(vertical: 5.0),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // Логика для изменения ивента
+                          },
+                          style: ElevatedButton.styleFrom(
+                            primary: Colors.blue, // Цвет кнопки
+                          ),
+                          child: Text('Изменить ивент'),
+                        ),
+                      ),
+                    ),
+                    Visibility(
+                      visible: isOrganizer == 0,
+                      child: Container(
+                        margin: EdgeInsets.symmetric(vertical: 5.0),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            cancelEvent(event);
+                            setState(() {
+                              event['isRegistered'] = false;
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            primary: Colors.blue, // Цвет кнопки
+                          ),
+                          child: Text('Отменить ивент'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+
+
+
+
               ],
+
             ),
           ),
         ),
@@ -447,7 +595,8 @@ class _EventDetailsState extends State<EventDetails> {
     );
   }
 
-  void _showContextMenu(BuildContext context, dynamic participant, String currentUserId,dynamic event,int currentIndex,dynamic eventList) {
+  void _showContextMenu(BuildContext context, dynamic participant, String currentUserId,dynamic event,int currentIndex,dynamic eventList, bool isRegistered) {
+    print(isRegistered);
     print(eventList);
     print('isOrganizer$isOrganizer');
     // Показать контекстное меню
