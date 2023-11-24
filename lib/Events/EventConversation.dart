@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:placeandplay/ProfileScreens/ViewProfileScreen.dart';
 import 'package:intl/intl.dart';
 
@@ -17,7 +18,6 @@ class EventConversation extends StatefulWidget {
 class _EventConversationState extends State<EventConversation> {
   String? previousSender;
   int consecutiveMessageCount = 0;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   User? user = FirebaseAuth.instance.currentUser;
   TextEditingController messageController = TextEditingController();
   CollectionReference messagesCollection =
@@ -58,12 +58,16 @@ class _EventConversationState extends State<EventConversation> {
                   .snapshots(),
               builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return CircularProgressIndicator();
+                  return const SpinKitFadingCircle(
+                    color: Colors.blue, // Цвет анимации
+                    size: 20.0, // Размер анимации
+                  );
                 }
 
                 List<QueryDocumentSnapshot> documents = snapshot.data!.docs;
 
                 return ListView.builder(
+                  key: ValueKey(widget.eventId),
                   reverse: true,
                   itemCount: documents.length,
                   itemBuilder: (context, index) {
@@ -72,6 +76,7 @@ class _EventConversationState extends State<EventConversation> {
                     String? sender = user?.uid;
 
                     return FutureBuilder<String?>(
+                      initialData: 'Аноним',
                       future: getSenderFirstName(sender!),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.done) {
@@ -94,14 +99,14 @@ class _EventConversationState extends State<EventConversation> {
                             senderName: messageData['senderName'],
                             isMyMessage: isMyMessage,
                             senderId: messageData['senderId'],
-                            timestamp: messageData['timestamp'], // Передайте время
+                            timestamp: messageData['timestamp'] is Timestamp
+                                ? (messageData['timestamp'] as Timestamp).toDate()
+                                : DateTime.now(),
                           );
-                        } else {
-                          print("Загрузка??");
-                          // Возвращайте заглушку, пока Future не завершится
-                          return Container(
-                            // Здесь можете использовать, например, CircularProgressIndicator,
-                            child: CircularProgressIndicator(),
+                        }else{
+                          return const SpinKitFadingCircle(
+                            color: Colors.blue, // Цвет анимации
+                            size: 20.0, // Размер анимации
                           );
                         }
                       },
@@ -125,7 +130,7 @@ class _EventConversationState extends State<EventConversation> {
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: TextField(
                         controller: messageController,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           hintText: 'Введите сообщение...',
                           border: InputBorder.none,
                         ),
@@ -133,16 +138,16 @@ class _EventConversationState extends State<EventConversation> {
                     ),
                   ),
                 ),
-                SizedBox(width: 8.0),
+                const SizedBox(width: 8.0),
                 GestureDetector(
                   onTap: sendMessage,
                   child: Container(
-                    padding: EdgeInsets.all(12.0),
-                    decoration: BoxDecoration(
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: const BoxDecoration(
                       color: Colors.blue,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.send,
                       color: Colors.white,
                     ),
@@ -181,7 +186,7 @@ class MessageBubble extends StatelessWidget {
   final String senderName;
   final bool isMyMessage;
   final String senderId;
-  final Timestamp timestamp; // Используйте Timestamp вместо String
+  final DateTime timestamp; // Используйте Timestamp вместо String
 
   MessageBubble({
     required this.message,
@@ -231,7 +236,7 @@ class MessageBubble extends StatelessWidget {
               ),
             ),
           ),
-        SizedBox(height: 8.0), // Расстояние между сообщениями
+        const SizedBox(height: 8.0), // Расстояние между сообщениями
         Row(
           mainAxisAlignment:
           isMyMessage ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -282,8 +287,8 @@ class MessageBubble extends StatelessWidget {
                   ),
                   SizedBox(height: 4.0),
                   Text(
-                    _formatTimestamp(timestamp.toDate()), // Отображение времени
-                    style: TextStyle(
+                    _formatTimestamp(DateTime.now()), // Отображение времени
+                    style: const TextStyle(
                       color: Colors.black,
                       fontSize: 12,
                     ),
@@ -325,5 +330,4 @@ class MessageBubble extends StatelessWidget {
   }
 
 }
-
 
