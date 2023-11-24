@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:toggle_switch/toggle_switch.dart';
 
 import '../ProfileScreens/ViewProfileScreen.dart';
+import 'EventConversation.dart';
 
 class EventsList extends StatefulWidget {
   final String userId;
@@ -70,6 +71,38 @@ class _EventsListState extends State<EventsList> {
     return eventDate.year == date.year &&
         eventDate.month == date.month &&
         eventDate.day == date.day;
+  }
+
+  void showCenteredNotification(BuildContext context, String message) {
+    OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).size.height / 2 - 25.0,
+        width: MediaQuery.of(context).size.width,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            alignment: Alignment.center,
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  message,
+                  style: TextStyle(fontSize: 16.0,fontWeight: FontWeight.bold,color: Colors.red),
+
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(overlayEntry);
+    Future.delayed(Duration(seconds: 3), () {
+      overlayEntry.remove();
+    });
   }
 
   DateTime parseEventDate(String dateString) {
@@ -262,7 +295,13 @@ class _EventsListState extends State<EventsList> {
                                   onTap: () {
                                     // Ваш код для открытия обсуждения
                                     // Например, Navigator.push(...);
-                                    print('Открыть обсуждение');
+                                    print('Открыть обсуждение11');
+                                    print(event['eventId']);
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => EventConversation(eventId: event['eventId']),
+                                      ),
+                                    );
                                   },
                                   child: Icon(
                                     Icons.chat, // Иконка обсуждения
@@ -274,7 +313,12 @@ class _EventsListState extends State<EventsList> {
                                   onTap: () {
                                     // Ваш код для открытия обсуждения
                                     // Например, Navigator.push(...);
-                                    print('Открыть обсуждение');
+                                    print('Открыть обсуждение22');
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => EventConversation(eventId: event['eventId']),
+                                      ),
+                                    );
                                   },
                                   child: Text(
                                     'Перейти в чат', // Текст рядом с иконкой
@@ -293,7 +337,7 @@ class _EventsListState extends State<EventsList> {
                           itemBuilder: (context) => [
                             PopupMenuItem<String>(
                               value: 'delete',
-                              child: Text('Удалить мероприятие'),
+                              child: Text('Отменить мероприятие'),
                               enabled: canEditEvent,
                             ),
                             PopupMenuItem<String>(
@@ -307,14 +351,92 @@ class _EventsListState extends State<EventsList> {
                               enabled: canEditEvent,
                             ),
                           ],
-                          onSelected: (value) {
+                          onSelected: (value) async {
                             if (value == 'delete') {
-                              // Обработка удаления мероприятия
+                              try {
+                                String eventId = event['eventId'];
+                                String uid = event['uid'];
+                                String eventName = event['eventName'];
+
+                                // Создание обновленного списка участников без удаленного
+                                DocumentReference<Map<String, dynamic>> docReference =
+                                FirebaseFirestore.instance.collection('events').doc(eventName);
+
+                                // Получение текущих данных
+                                DocumentSnapshot<Map<String, dynamic>> docSnapshot = await docReference.get();
+
+                                // Проверка, есть ли данные
+                                if (docSnapshot.exists) {
+                                  // Получение текущих данных
+                                  Map<String, dynamic> data = docSnapshot.data()!;
+
+                                  // Получение текущего массива событий
+                                  List<dynamic> events = List.from(data['events']);
+
+                                  // Найдите индекс события по eventId и uid
+                                  int indexOfEvent = events.indexWhere(
+                                          (event) => event['eventId'] == eventId && event['uid'] == uid);
+
+                                  // Если событие найдено, удаляем его из массива "events"
+                                  if (indexOfEvent != -1) {
+                                    events.removeAt(indexOfEvent);
+
+                                    // Обновление документа с обновленным массивом "events"
+                                    await docReference.update({'events': events});
+                                    showCenteredNotification(context, 'Ваш ивент успешно отменён!');
+                                  }
+                                }
+                              } catch (e) {
+                                print('Ошибка при отмене ивента: $e');
+                                showCenteredNotification(context, 'Ошибка при отмене ивента');
+                              }
                             } else if (value == 'confirm') {
+                              try {
+                                String eventId = event['eventId'];
+                                String eventName = event['eventName'];
+
+                                // Создание обновленного списка участников без удаленного
+                                DocumentSnapshot<Map<String, dynamic>> docSnapshot =
+                                await FirebaseFirestore.instance.collection('events').doc(eventName).get();
+
+                                // Проверка, есть ли данные
+                                if (docSnapshot.exists) {
+                                  // Получение текущих данных
+                                  Map<String, dynamic> data = docSnapshot.data()!;
+
+                                  // Получение текущего массива событий
+                                  List<dynamic> events = List.from(data['events']);
+
+                                  // Найдите событие по eventId
+                                  int indexOfEvent = events.indexWhere((event) => event['eventId'] == eventId);
+
+                                  // Если событие найдено, обновите его "participants"
+                                  if (indexOfEvent != -1) {
+                                    events[indexOfEvent]['isRegistered'] = true;
+
+                                    // Обновление документа с обновленным массивом "events"
+                                    await FirebaseFirestore.instance.collection('events').doc(eventName).update({'events': events});
+                                  }
+                                }
+                                showCenteredNotification(context, 'Регистрация подтверждена успешно');
+
+                                // Create a copy of the event with the modified isRegistered property
+                                Map<String, dynamic> updatedEvent = Map.from(event);
+                                updatedEvent['isRegistered'] = true;
+
+                                // Update the UI by setting the state with the updated event
+                                setState(() {
+                                  event = updatedEvent;
+                                });
+                              } catch (e) {
+                                print('Ошибка при подтверждении регистрации: $e');
+                                showCenteredNotification(context, 'Ошибка при подтверждении регистрации');
+                              }
                               // Обработка подтверждения мероприятия
-                            } else if (value == 'edit') {
-                              // Обработка редактирования мероприятия
                             }
+                            // else if (value == 'edit') {
+                            //   // Обработка редактирования мероприятия
+                            // }
                           },
                         ),
                         onTap: () {
@@ -439,18 +561,50 @@ class _EventDetailsState extends State<EventDetails> {
 
 
   void cancelEvent(Map<String, dynamic> event) async {
+
+    print('Начало отмены');
     try {
       String eventId = event['eventId'];
+      String uid = event['uid'];
       String eventName = event['eventName'];
 
-      // Удаление события из базы данных
-      await FirebaseFirestore.instance.collection('events').doc(eventName).delete();
+      // Создание обновленного списка участников без удаленного
+      DocumentReference<Map<String, dynamic>> docReference =
+      FirebaseFirestore.instance.collection('events').doc(eventName);
 
-      showCenteredNotification(context, 'Ивент успешно отменен');
+      // Получение текущих данных
+      DocumentSnapshot<Map<String, dynamic>> docSnapshot = await docReference.get();
+
+      // Проверка, есть ли данные
+      if (docSnapshot.exists) {
+        // Получение текущих данных
+        Map<String, dynamic> data = docSnapshot.data()!;
+
+        // Получение текущего массива событий
+        List<dynamic> events = List.from(data['events']);
+
+        // Найдите индекс события по eventId и uid
+        int indexOfEvent = events.indexWhere(
+                (event) => event['eventId'] == eventId && event['uid'] == uid);
+
+        // Если событие найдено, удаляем его из массива "events"
+        if (indexOfEvent != -1) {
+          events.removeAt(indexOfEvent);
+
+          // Обновление документа с обновленным массивом "events"
+          await docReference.update({'events': events});
+          showCenteredNotification(context, 'Ваш ивент успешно отменён!');
+          setState(() {
+            event['eventName'] = "Ивент отменен!";
+          });
+        }
+      }
     } catch (e) {
       print('Ошибка при отмене ивента: $e');
       showCenteredNotification(context, 'Ошибка при отмене ивента');
     }
+
+
   }
 
 
