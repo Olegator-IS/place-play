@@ -76,6 +76,7 @@ class LegendItem extends StatelessWidget {
 
 
 class MapsPageState extends State<MapsPage> {
+  bool isJoinButtonVisible = true;
   DateTime? selectedDate; // Добавляем переменную для хранения выбранной даты
   String markerName = "";
   DocumentSnapshot? userDataSnapshot;
@@ -615,7 +616,8 @@ class MapsPageState extends State<MapsPage> {
                                         // Вызовите функцию для присоединения к мероприятию
                                         joinEvent(markerName, dateEvent, startTimeEvent, currentUserId, firstNameParticipant, organizerUid);
                                       }
-                                    },
+                },
+
                                     icon: Icon(Icons.add), // Иконка "плюс"
                                     label: Text('Присоединиться'),
                                     style: ElevatedButton.styleFrom(
@@ -730,7 +732,7 @@ class MapsPageState extends State<MapsPage> {
                                 Visibility(
                                   visible: !isCurrentUserParticipant(participants, widget.userId),
                                   child: ElevatedButton.icon(
-                                    onPressed: () {
+                                    onPressed: isJoinButtonVisible ? () {
                                       // Получите UID текущего пользователя (замените на фактический способ получения UID текущего пользователя)
                                       String currentUserId = widget.userId;
                                       print('Текущий пользователь нажал на Присоединиться: $currentUserId');
@@ -756,7 +758,7 @@ class MapsPageState extends State<MapsPage> {
                                         // Вызовите функцию для присоединения к мероприятию
                                         joinEvent(markerName, dateEvent, startTimeEvent, currentUserId, firstNameParticipant, organizerUid);
                                       }
-                                    },
+                                    } : null,
                                     icon: Icon(Icons.add),
                                     label: Text('Присоединиться'),
                                     style: ElevatedButton.styleFrom(

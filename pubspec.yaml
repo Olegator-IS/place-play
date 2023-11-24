@@ -54,6 +54,9 @@ dependencies:
   toggle_switch: ^2.0.2
   flutter_local_notifications: ^16.1.0
   another_flushbar: ^1.12.30
+  marquee: ^2.0.5
+  emoji_picker_flutter: ^1.1.0
+
 
 
 
