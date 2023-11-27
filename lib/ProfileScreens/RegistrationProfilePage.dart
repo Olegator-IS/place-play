@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../References/References.dart';
 import 'ProfileScreen.dart';
 
@@ -21,6 +22,7 @@ class RegistrationProfilePage extends StatefulWidget {
 }
 
 class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   List<String> _selectedGameInterests = [];
@@ -103,9 +105,13 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
   }
 
   void _registerProfile() async {
+
     BuildContext currentContext = context;
     User? user = FirebaseAuth.instance.currentUser;
+    try {
 
+      // Получите текущего пользователя
+      User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       String uid = user.uid;
       Map<String, dynamic> userProfileData = {
@@ -120,28 +126,35 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
         'gender':_genderController.text,
       };
 
-      try {
+
+
+
+
+
         await FirebaseFirestore.instance
             .collection('userProfiles')
             .doc(uid)
             .set(userProfileData);
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setString('firstName', _firstNameController.text);
+      prefs.setBool('isLoggedIn', true);
         Navigator.pushReplacement(
           currentContext,
           MaterialPageRoute(builder: (context) => ProfileScreen(userId: uid)),
         );
-      } catch (e) {
-        ScaffoldMessenger.of(currentContext).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка при сохранении профиля: $e'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } else {
+      } else {
       ScaffoldMessenger.of(currentContext).showSnackBar(
         const SnackBar(
           content: Text('Пользователь не аутентифицирован'),
           duration: Duration(seconds: 3),
+        ),
+      );
+    }
+    } catch (e) {
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка при сохранении профиля: $e'),
+          duration: const Duration(seconds: 3),
         ),
       );
     }

@@ -1,9 +1,13 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:placeandplay/ProfileScreens/ViewProfileScreen.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
 
 
 class EventConversation extends StatefulWidget {
@@ -16,6 +20,8 @@ class EventConversation extends StatefulWidget {
 }
 
 class _EventConversationState extends State<EventConversation> {
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+  FlutterLocalNotificationsPlugin();
   String? previousSender;
   int consecutiveMessageCount = 0;
   User? user = FirebaseAuth.instance.currentUser;
@@ -25,6 +31,45 @@ class _EventConversationState extends State<EventConversation> {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  @override
+  void initState() {
+    super.initState();
+    // Добавляем слушатель при создании виджета
+    // _initPlatformState();
+    // _registerBroadcastReceiver();
+  }
+  // Инициализация канала для платформенных вызовов
+  // Future<void> _initPlatformState() async {
+  //   const platform = MethodChannel('example.com/broadcast');
+  //
+  //   try {
+  //     await platform.invokeMethod('initBroadcastReceiver');
+  //   } on PlatformException catch (e) {
+  //     print("Failed to invoke platform method: '${e.message}'.");
+  //   }
+  // }
+
+  // Регистрация локального широковещательного приемника
+  // Future<void> _registerBroadcastReceiver() async {
+  //   const platform = MethodChannel('example.com/broadcast');
+  //
+  //   // Используем EventChannel для прослушивания событий от Android
+  //   EventChannel('example.com/broadcast_receiver')
+  //       .receiveBroadcastStream()
+  //       .listen((dynamic event) {
+  //     // Обработка данных, которые вы передаете из MyFirebaseMessagingService
+  //     print('Received broadcast event: $event');
+  //     // Возможно, здесь вы хотите обновить ваш интерфейс с новыми данными
+  //   });
+  // }
+
+  // @override
+  // void dispose() {
+  //   // Отменяем регистрацию локального широковещательного приемника при уничтожении виджета
+  //   const platform = MethodChannel('example.com/broadcast');
+  //   platform.invokeMethod('disposeBroadcastReceiver');
+  //   super.dispose();
+  // }
 
   Future<String?> getSenderFirstName(String senderId) async {
     try {
@@ -43,6 +88,8 @@ class _EventConversationState extends State<EventConversation> {
 
   @override
   Widget build(BuildContext context) {
+    // _initPlatformState();
+    // _registerBroadcastReceiver();
     return Scaffold(
       appBar: AppBar(
         title: Text('Чат для события ${widget.eventId}'),
@@ -175,10 +222,67 @@ class _EventConversationState extends State<EventConversation> {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
+      initializeNotifications();
+      sendTestNotification();
+
       messageController.clear();
+
     }
   }
+
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+
+
+
+
+  Future<void> initializeNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+    AndroidInitializationSettings('@mipmap/ic_launcher');
+    final InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  Future<void> sendTestNotification() async {
+    await _firebaseMessaging.subscribeToTopic('test'); // Подписываемся на тему
+
+    // Создаем уведомление
+    final AndroidNotificationDetails androidPlatformChannelSpecifics =
+    AndroidNotificationDetails(
+      'your channel id', // id канала
+      'your channel name', // имя канала
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    final NotificationDetails platformChannelSpecifics =
+    NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'Заголовок уведомления',
+      'Текст уведомления',
+      platformChannelSpecifics,
+      payload: 'item x',
+    );
+  }
+
+  Future<void> _handleMessage(RemoteMessage message) async {
+    print('Handling a background message: ${message.messageId}');
+    // Обработка данных из уведомления, пришедшего в фоновом режиме
+  }
+
+
+
+
+
+
+
 }
+
+
+
 
 
 class MessageBubble extends StatelessWidget {
@@ -211,11 +315,35 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (senderId == '12345' && senderName == 'system') {
+      // Отображение системного сообщения в центре чата
+      return Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              decoration: BoxDecoration(
+                color: Colors.red[300],
+                borderRadius: BorderRadius.circular(5.0),
+              ),
+              child: Text(
+                message.toUpperCase(),
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ));
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (!isMyMessage)
-
           Padding(
             padding: const EdgeInsets.only(left: 10.0),
             child: GestureDetector(
@@ -238,8 +366,9 @@ class MessageBubble extends StatelessWidget {
           ),
         const SizedBox(height: 8.0), // Расстояние между сообщениями
         Row(
-          mainAxisAlignment:
-          isMyMessage ? MainAxisAlignment.end : MainAxisAlignment.start,
+          mainAxisAlignment: isMyMessage
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
           children: [
             if (!isMyMessage)
               GestureDetector(
@@ -257,7 +386,8 @@ class MessageBubble extends StatelessWidget {
                         color: Colors.white,
                       ),
                     ),
-                    backgroundColor: Colors.blue, // Цвет круга для входящих сообщений
+                    backgroundColor:
+                    Colors.blue, // Цвет круга для входящих сообщений
                   ),
                 ),
               ),
@@ -287,7 +417,7 @@ class MessageBubble extends StatelessWidget {
                   ),
                   SizedBox(height: 4.0),
                   Text(
-                    _formatTimestamp(DateTime.now()), // Отображение времени
+                    _formatTimestamp(timestamp), // Отображение времени
                     style: const TextStyle(
                       color: Colors.black,
                       fontSize: 12,
@@ -312,7 +442,8 @@ class MessageBubble extends StatelessWidget {
                         color: Colors.white,
                       ),
                     ),
-                    backgroundColor: Colors.blue, // Цвет круга для исходящих сообщений
+                    backgroundColor:
+                    Colors.blue, // Цвет круга для исходящих сообщений
                   ),
                 ),
               ),
@@ -323,11 +454,7 @@ class MessageBubble extends StatelessWidget {
   }
 
   String _formatTimestamp(DateTime timestamp) {
-    // Реализуйте форматирование времени по вашему желанию
-    // Например, можно использовать intl пакет: https://pub.dev/packages/intl
-    // или другие подходящие методы для форматирования времени
     return DateFormat.yMMMd().add_jm().format(timestamp);
   }
-
 }
 

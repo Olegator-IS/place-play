@@ -867,6 +867,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             );
           } else if(index == 1){
+            print('widget.userId $widget.userId');
+            print(widget.userId);
           Navigator.of(context).push(
             MaterialPageRoute(
                 builder: (context) => MapsPage(userId: widget.userId),
