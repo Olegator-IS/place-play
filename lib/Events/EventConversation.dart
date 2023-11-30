@@ -121,7 +121,14 @@ class _EventConversationState extends State<EventConversation> {
                     var messageData = documents[index].data() as Map<String, dynamic>;
                     var isMyMessage = messageData['senderId'] == user?.uid;
                     String? sender = user?.uid;
-
+                    // Кто прочитал сообшение
+                    messagesCollection
+                        .doc(widget.eventId)
+                        .collection('messages')
+                        .doc(documents[index].id)
+                        .update({
+                      'readBy': FieldValue.arrayUnion([user?.uid]),
+                    });
                     return FutureBuilder<String?>(
                       initialData: 'Аноним',
                       future: getSenderFirstName(sender!),
@@ -149,6 +156,7 @@ class _EventConversationState extends State<EventConversation> {
                             timestamp: messageData['timestamp'] is Timestamp
                                 ? (messageData['timestamp'] as Timestamp).toDate()
                                 : DateTime.now(),
+                              readBy: [],
                           );
                         }else{
                           return const SpinKitFadingCircle(
@@ -220,6 +228,7 @@ class _EventConversationState extends State<EventConversation> {
         'senderId': user?.uid,
         'senderName': senderName,
         'timestamp': FieldValue.serverTimestamp(),
+        'readBy': [user?.uid],
       });
 
       initializeNotifications();
@@ -291,6 +300,7 @@ class MessageBubble extends StatelessWidget {
   final bool isMyMessage;
   final String senderId;
   final DateTime timestamp; // Используйте Timestamp вместо String
+  final List<dynamic> readBy;
 
   MessageBubble({
     required this.message,
@@ -298,6 +308,7 @@ class MessageBubble extends StatelessWidget {
     required this.isMyMessage,
     required this.senderId,
     required this.timestamp,
+    required this.readBy,
   });
 
   void navigateToUserProfile(BuildContext context, String userId) {
