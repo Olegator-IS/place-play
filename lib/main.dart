@@ -1,10 +1,11 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:placeandplay/WelcomeScreens/LoginPage.dart';
 import 'package:placeandplay/RegistrationScreens/RegistrationPage.dart';
 import 'EmptyScreen.dart';
-import 'ProfileScreens/ViewProfileScreen.dart';
 import 'WelcomeScreens/HelloLayout.dart';
 import 'package:firebase_core/firebase_core.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +18,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      // Обработка пришедшего уведомления
+    });
 
 
     return MaterialApp(

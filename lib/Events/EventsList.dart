@@ -1,4 +1,5 @@
 import 'package:another_flushbar/flushbar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:toggle_switch/toggle_switch.dart';
@@ -39,6 +40,54 @@ class _EventsListState extends State<EventsList> {
 
     return organizerEvents;
   }
+
+  Future<String> getUnreadMessageCount(Map<String, dynamic> eventList, String currentUserId) async {
+    String unreadMessageCount = "";
+    int unreadMessage = 0;
+    List<String> test = [];
+    for (var eventEntry in eventList.entries) {
+      String eventId = eventEntry.key;
+      if(eventId.contains('eventId')){
+        test.add(eventEntry.value);
+
+
+      }
+    }
+    for (int i=0;i<test.length;i++) {
+      print(test[i]);
+      CollectionReference<Map<String, dynamic>> eventMessagesCollection =
+      FirebaseFirestore.instance.collection('eventMessages').doc(test[i]).collection('messages');
+      print('Сколько сообщений $eventMessagesCollection');
+      // Получаем все сообщения для текущего события
+      QuerySnapshot<Map<String, dynamic>> messagesSnapshot =
+      await eventMessagesCollection.get();
+
+      print('TTTTTTTTTTT124$messagesSnapshot');
+
+      for (QueryDocumentSnapshot<Map<String, dynamic>> messageDoc in messagesSnapshot.docs) {
+        print('1241241241');
+        Map<String, dynamic> message = messageDoc.data();
+        List<dynamic>? readBy = message['readBy'] as List<dynamic>?;
+        print(readBy);
+
+        // Если readBy не содержит currentUserId, увеличиваем счетчик непрочитанных сообщений
+        if (readBy == null || !readBy.contains(currentUserId)) {
+          unreadMessage++;
+          unreadMessageCount = '(+$unreadMessage)';
+          print(unreadMessage);
+          if(unreadMessage == 0){
+            unreadMessageCount = "";
+          }
+        }
+      }
+    }
+
+
+    return unreadMessageCount;
+  }
+
+
+
 
 
   void updateEventsList(Map<String, dynamic> updatedEvent, int currentIndex) {
@@ -309,25 +358,37 @@ class _EventsListState extends State<EventsList> {
                                   ),
                                 ),
                                 SizedBox(width: 8), // Расстояние между иконкой и текстом
-                                GestureDetector(
-                                  onTap: () {
-                                    // Ваш код для открытия обсуждения
-                                    // Например, Navigator.push(...);
-                                    print('Открыть обсуждение22');
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => EventConversation(eventId: event['eventId']),
-                                      ),
-                                    );
+                                FutureBuilder<String>(
+                                  future: getUnreadMessageCount(event, widget.userId),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState == ConnectionState.waiting) {
+                                      return CircularProgressIndicator(); // Или другой индикатор загрузки
+                                    } else if (snapshot.hasError) {
+                                      return Text('Ошибка: ${snapshot.error}');
+                                    } else {
+                                      String unreadMessageCount = snapshot.data ?? "";
+                                      return GestureDetector(
+                                        onTap: () {
+                                          // Ваш код для открытия обсуждения
+                                          // Например, Navigator.push(...);
+                                          print('Открыть обсуждение22');
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (context) => EventConversation(eventId: event['eventId']),
+                                            ),
+                                          );
+                                        },
+                                        child: Text(
+                                          'Перейти в чат $unreadMessageCount',
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            // Ваши стили для текста
+                                          ),
+                                        ),
+                                      );
+                                    }
                                   },
-                                  child: Text(
-                                    'Перейти в чат', // Текст рядом с иконкой
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      // Ваши стили для текста
-                                    ),
-                                  ),
                                 ),
                               ],
                             ),
@@ -419,6 +480,9 @@ class _EventsListState extends State<EventsList> {
                                   }
                                 }
                                 showCenteredNotification(context, 'Регистрация подтверждена успешно');
+                                String organizator = event['uid'];
+                                sendMessage('Организатор $organizator подтвердил регистрацию',eventId);
+
 
                                 // Create a copy of the event with the modified isRegistered property
                                 Map<String, dynamic> updatedEvent = Map.from(event);
@@ -468,8 +532,41 @@ class _EventsListState extends State<EventsList> {
     );
   }
 }
+void sendMessage(String messageText,String eventId) async {
+  User? user = FirebaseAuth.instance.currentUser;
+  String? sender = user?.uid;
+  CollectionReference messagesCollection =
+  FirebaseFirestore.instance.collection('eventMessages');
 
+  if (messageText.isNotEmpty) {
+    String senderName = await getSenderFirstName(sender!) ?? 'Аноним';
 
+    // Добавление сообщения в чат
+    await messagesCollection.doc(eventId).collection('messages').add({
+      'message': '$senderName $messageText',
+      'senderId': '12345',
+      'senderName': 'system',
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+  }
+}
+
+Future<String?> getSenderFirstName(String senderId) async {
+  try {
+    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+    DocumentSnapshot<Map<String, dynamic>> userSnapshot =
+    await _firestore.collection('users').doc(senderId).get();
+
+    if (userSnapshot.exists) {
+      return userSnapshot.data()?['firstName'];
+    }
+  } catch (e) {
+    print('Ошибка при получении данных пользователя: $e');
+  }
+
+  return null;
+}
 
 
 class EventDetails extends StatefulWidget  {
@@ -544,6 +641,8 @@ class _EventDetailsState extends State<EventDetails> {
         }
       }
       showCenteredNotification(context, 'Регистрация подтверждена успешно');
+      String organizator = event['uid'];
+      sendMessage('Организатор $organizator подтвердил регистрацию',eventId);
 
       // Create a copy of the event with the modified isRegistered property
       Map<String, dynamic> updatedEvent = Map.from(event);
@@ -558,6 +657,8 @@ class _EventDetailsState extends State<EventDetails> {
       showCenteredNotification(context, 'Ошибка при подтверждении регистрации');
     }
   }
+
+
 
 
   void cancelEvent(Map<String, dynamic> event) async {

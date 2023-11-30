@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:location/location.dart';
+import 'package:placeandplay/Events/EventConversation.dart';
 import 'package:placeandplay/Events/EventCreationForm.dart';
 import 'package:placeandplay/ProfileScreens/ProfileScreen.dart';
 import 'package:placeandplay/ProfileScreens/ViewProfileScreen.dart';
@@ -76,6 +77,21 @@ class LegendItem extends StatelessWidget {
 
 
 class MapsPageState extends State<MapsPage> {
+  CollectionReference events = FirebaseFirestore.instance.collection('events');
+  List<Map<String, dynamic>> fetchOrganizerEvents(
+      QuerySnapshot<Map<String, dynamic>> snapshot) {
+    List<Map<String, dynamic>> organizerEvents = [];
+
+    snapshot.docs.forEach((doc) {
+      List<Map<String, dynamic>> eventsList =
+      List<Map<String, dynamic>>.from(doc.data()!['events']);
+      organizerEvents.addAll(
+        eventsList.where((event) => event['uid'] == widget.userId),
+      );
+    });
+
+    return organizerEvents;
+  }
   bool isJoinButtonVisible = true;
   DateTime? selectedDate; // Добавляем переменную для хранения выбранной даты
   String markerName = "";
@@ -88,13 +104,14 @@ class MapsPageState extends State<MapsPage> {
   List<TextMarker> _textMarkers = [];
 
   final apiKey = 'AIzaSyC5PFLVPT3FuPCUYKEcbccwGFaP11r-wUA'; // Замените на свой ключ API
+  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
 
   @override
   void initState() {
     super.initState();
     _fetchLocationsFromFirestore();
     _fetchUserData();
-     _refreshData();
+    _refreshData();
   }
 
   Future<void> _loadUserData() async {
@@ -216,6 +233,52 @@ class MapsPageState extends State<MapsPage> {
     await _loadUserData();
   }
 
+
+  Future<String> getUnreadMessageCount(Map<String, dynamic> eventList, String currentUserId) async {
+    String unreadMessageCount = "";
+    int unreadMessage = 0;
+    List<String> test = [];
+    for (var eventEntry in eventList.entries) {
+      String eventId = eventEntry.key;
+      if(eventId.contains('eventId')){
+        test.add(eventEntry.value);
+
+
+      }
+    }
+    for (int i=0;i<test.length;i++) {
+      print(test[i]);
+      CollectionReference<Map<String, dynamic>> eventMessagesCollection =
+      FirebaseFirestore.instance.collection('eventMessages').doc(test[i]).collection('messages');
+      print('Сколько сообщений $eventMessagesCollection');
+      // Получаем все сообщения для текущего события
+      QuerySnapshot<Map<String, dynamic>> messagesSnapshot =
+      await eventMessagesCollection.get();
+
+      print('TTTTTTTTTTT124$messagesSnapshot');
+
+      for (QueryDocumentSnapshot<Map<String, dynamic>> messageDoc in messagesSnapshot.docs) {
+        print('1241241241');
+        Map<String, dynamic> message = messageDoc.data();
+        List<dynamic>? readBy = message['readBy'] as List<dynamic>?;
+        print(readBy);
+
+        // Если readBy не содержит currentUserId, увеличиваем счетчик непрочитанных сообщений
+        if (readBy == null || !readBy.contains(currentUserId)) {
+          unreadMessage++;
+          unreadMessageCount = '(+$unreadMessage)';
+          print(unreadMessage);
+          if(unreadMessage == 0){
+            unreadMessageCount = "";
+          }
+        }
+      }
+    }
+
+
+    return unreadMessageCount;
+  }
+
   Future<void> _fetchLocationsFromFirestore() async {
     final String firstNameUser;
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -275,7 +338,7 @@ class MapsPageState extends State<MapsPage> {
         final bool eventExists = await checkEventAvailability(name);
 
         CollectionReference locations = FirebaseFirestore.instance.collection('locationsUz');
-        CollectionReference events = FirebaseFirestore.instance.collection('events');
+
 
         String nameToCheck = name;
 
@@ -295,6 +358,7 @@ class MapsPageState extends State<MapsPage> {
 
 
 
+
         final marker = Marker(
           markerId: MarkerId(doc.id),
           position: LatLng(coordinates.latitude, coordinates.longitude),
@@ -310,498 +374,558 @@ class MapsPageState extends State<MapsPage> {
               builder: (context) {
                 return AlertDialog(
                   title: Text(name),
-                content: Container(
-                color: Colors.white.withOpacity(0.5),
-                  child: Scrollbar(
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                    child: FutureBuilder<bool>(
-                      future: checkEventAvailability(name),
-                      builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return CircularProgressIndicator();
-                        } else if (snapshot.hasError) {
-                          return Text('Произошла ошибка: ${snapshot.error}');
-                        } else {
+                  content: StatefulBuilder(
+                builder: (BuildContext context, StateSetter setState) {
+                  return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream: FirebaseFirestore.instance.collection('events').snapshots(),
+                    builder: (context, snapshot) {
+                  // Your builder logic here
 
-                          return Column(
-                            mainAxisSize: MainAxisSize.min,
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return CircularProgressIndicator();
+                            } else if (snapshot.hasError) {
+                              return Text('Произошла ошибка: ${snapshot.error}');
+                            } else {
 
-                            children: [
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => EventCreationForm(
-                                        organizer: firstName.toString(),
-                                        activityType: type,
-                                        userId: widget.userId,
-                                        type: type,
-                                        address: address,
-                                        name: name,
-                                        phoneNumber: phoneNumber, firstName: firstName,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: Text('Создать событие'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.black38,
-                                  textStyle: const TextStyle(
-                                    fontSize: 22.0,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const Text('Все ивенты', style: TextStyle(color: Colors.black, fontSize: 18)),
+                              return SingleChildScrollView(
+                                child: Column(
+                                mainAxisSize: MainAxisSize.min,
 
-                              const Text('Ивенты отмеченные красным цветом уже завершены,присоединиться невозможно\n', style: TextStyle(color: Colors.red, fontSize: 12)),
-                              const Text('Прошедшие ивенты отображаются за последние 3 дня', style: TextStyle(color: Colors.red, fontSize: 12)),
-
-
-                              FutureBuilder<DocumentSnapshot>(
-                                future: FirebaseFirestore.instance.collection('events').doc(name).get(),
-                                builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> eventSnapshot) {
-                                  if (eventSnapshot.connectionState == ConnectionState.waiting) {
-                                    return CircularProgressIndicator();
-                                  } else if (eventSnapshot.hasError) {
-                                    return Text('Произошла ошибка: ${eventSnapshot.error}');
-                                  } else if (eventSnapshot.hasData) {
-                                    final eventData = eventSnapshot.data!.data();
-                                    if (eventData == null || eventData is! Map<String, dynamic>) {
-                                      return Text('Событий не найдено');
-                                    }
-
-                                    const Text('Доступные мероприятия на', style: TextStyle(color: Colors.black, fontSize: 18));
-                                    Text(
-                                      selectedDate != null
-                                          ? ' ${DateFormat('dd.MM.yyyy').format(selectedDate!)}'
-                                          : 'Выберите дату', // Отобразить "Выберите дату", если дата не выбрана
-                                      style: TextStyle(color: Colors.black, fontSize: 18),
-                                    );
-                                    final eventsList = (eventData['events'] as List<dynamic>?) ?? [];
-
-                                    // Создайте список виджетов для отображения данных о событиях
-                                    List<Widget> eventWidgets = [];
-
-                                    eventsList.forEach((event) {
-                                      final type = event['type'];
-                                      final markerName = event['eventName'];
-                                      final dateEvent = event['dateEvent'];
-                                      final startTimeEvent = event['startTimeEvent'];
-                                      final isRegistered = event['isRegistered'];
-                                      final organizer = event['organizer'];
-                                      final organizerUid = event['uid'];
-                                      final List<dynamic> participantsData = (event['participants'] as List<dynamic>?) ?? [];
-                                      final List<Map<String, String>> participants = participantsData.map((participant) {
-                                        final Map<String, dynamic> participantData = participant as Map<String, dynamic>;
-
-                                        // Извлекаем uid и firstName из данных участника
-                                        final String uid = participantData['uid'] as String;
-                                        final String firstName = participantData['firstName'] as String;
-
-                                        return {'uid': uid, 'firstName': firstName};
-                                      }).toList();
-                                      DateTime currentDate = DateTime.now();
-                                      DateTime twentyFourHoursAgo = currentDate.subtract(Duration(hours: 24));
-                                      DateTime eventDate = DateFormat('dd.MM.yyyy').parse(dateEvent);
-                                      String currentDateFormatted = DateFormat('dd.MM.yyyy').format(currentDate);
-                                      String eventDateFormatted = DateFormat('dd.MM.yyyy').format(eventDate);
-
-                                      bool isSameDate = currentDateFormatted == eventDateFormatted; // проверка на день
-                                      final eventTime = TimeOfDay.fromDateTime(DateTime.parse("2023-10-27 $startTimeEvent:00"));
-                                      bool isWithinLast24Hours = eventDate.isAfter(twentyFourHoursAgo);
-                                      Duration timeDifference = currentDate.difference(eventDate);
-
-
-                                      final currentTime = TimeOfDay.now();
-
-
-                                      print('$timeDifference.inDays $eventDate');
-
-
-                if (!isSameDate && !isDateInFuture(dateEvent)) {
-                  if(!isDateInPast(dateEvent, 2)) {
-                    eventWidgets.add(
-                      InkWell(
-                        child: Column(
-                          children: [
-                            SizedBox(height: 16.0),
-                            Row(
-                              children: [
-                                Text('Тип события:'),
-                                SizedBox(width: 8),
-                                Text(type),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Text('Имя организатора:'),
-                                SizedBox(width: 8),
-                                Text(organizer),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Text('Участники:'),
-                                SizedBox(width: 8),
-                                Text(
-                                  participants.map((
-                                      participant) => participant['firstName'])
-                                      .join(', '),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Text('Дата события:'),
-                                SizedBox(width: 8),
-                                Text(dateEvent),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Text('Время начала:'),
-                                SizedBox(width: 8),
-                                Text(startTimeEvent),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Text('Статус:'),
-                                SizedBox(width: 8),
-                                Text(
-                                  isRegistered ? 'Подтверждено' : 'Ожидает регистрации',
-                                  style: TextStyle(
-                                    color: isRegistered ? Colors.green : Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                // Для размещения текста по центру
                                 children: [
-                                  Text(
-                                    'Данное мероприятие закончено\n$eventDateFormatted\nРегистрация невозможна',
-                                    style: TextStyle(
-                                      color: Colors.red,
-                                      fontSize: 17.0,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-
-                }else if(isDateInFuture(dateEvent) || isSameDate){
-                  if (isSameDate && isEventExpired(startTimeEvent)) {
-                    final eventHour = eventTime.hour;
-                    final eventMinute = eventTime.minute;
-                    final currentHour = currentTime.hour;
-                    final currentMinute = currentTime.minute;
-
-                    final hoursDiff =   currentHour - eventHour ;
-                    eventWidgets.add(
-                      InkWell(
-                        child: Column(
-                          children: [
-                            SizedBox(height: 16.0),
-                            Row(
-                              children: [
-                                Text('Тип события:'),
-                                SizedBox(width: 8),
-                                Text(type),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Text('Имя организатора:'),
-                                SizedBox(width: 8),
-                                Text(organizer),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Text('Участники:'),
-                                SizedBox(width: 8),
-                                Text(
-                                  participants.map((participant) => participant['firstName']).join(', '),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Text('Дата события:'),
-                                SizedBox(width: 8),
-                                Text(dateEvent),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Text('Время начала:'),
-                                SizedBox(width: 8),
-                                Text(startTimeEvent),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Text('Статус:'),
-                                SizedBox(width: 8),
-                                Text(
-                                  isRegistered ? 'Подтверждено' : 'Ожидает регистрации',
-                                  style: TextStyle(
-                                    color: isRegistered ? Colors.green : Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center, // Для размещения текста по центру
-                                children: [
-                                  Text(
-                                    'Мероприятие уже идёт\n~ $hoursDiff часов\nНо вы всё еще можете присоединится',
-                                    style: TextStyle(
-                                      color: Colors.red,
-                                      fontSize: 14.0,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center, // Для размещения кнопок в начале и в конце строки
-                                children: [
-                                  Visibility(
-                                  visible: !isCurrentUserParticipant(participants, widget.userId),
-                                  // Промежуток между кнопками
-                              child: ElevatedButton.icon(
+                                  ElevatedButton(
                                     onPressed: () {
-                                      String currentUserId = widget.userId;
-                                      print('Текущий пользователь нажал на Присоединиться: $currentUserId');
-
-                                      // Проверьте, есть ли текущий пользователь уже в списке участников
-                                      bool isUserAlreadyParticipant = false;
-                                      for (var participant in participants) {
-                                        if (participant['uid'] == currentUserId) {
-                                          isUserAlreadyParticipant = true;
-                                          break;
-                                        }
-                                      }
-
-                                      // Если текущего пользователя еще нет в списке, добавьте его
-                                      if (!isUserAlreadyParticipant) {
-                                        String? firstNameParticipant = prefs.getString('firstName');
-                                        // Создайте нового участника
-                                        Map<String, String> newParticipant = {'uid': currentUserId, 'firstName': firstNameParticipant as String};
-
-                                        // Добавьте нового участника в список
-                                        participants.add(newParticipant);
-
-                                        // Вызовите функцию для присоединения к мероприятию
-                                        joinEvent(markerName, dateEvent, startTimeEvent, currentUserId, firstNameParticipant, organizerUid);
-                                      }
-                },
-
-                                    icon: Icon(Icons.add), // Иконка "плюс"
-                                    label: Text('Присоединиться'),
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green,
-                                        textStyle: const TextStyle(
-                                          fontSize: 25.0,
-                                          fontWeight: FontWeight.bold,
+                                      Navigator.of(context).pop();
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => EventCreationForm(
+                                            organizer: firstName.toString(),
+                                            activityType: type,
+                                            userId: widget.userId,
+                                            type: type,
+                                            address: address,
+                                            name: name,
+                                            phoneNumber: phoneNumber, firstName: firstName,
+                                          ),
                                         ),
-                                    ),
-                                  ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-                    );
-                  } else {
-                  eventWidgets.add(
-                    InkWell(
-                      child: Column(
-                        children: [
-                          SizedBox(height: 16.0),
-                          Row(
-                            children: [
-                              Text('Тип события:'),
-                              SizedBox(width: 8),
-                              Text(type),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Text('Имя организатора:'),
-                              SizedBox(width: 8),
-                              Text(organizer),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Text('Участники:'),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  participants.map((participant) => participant['firstName']).join(', '),
-                                  overflow: TextOverflow.ellipsis, // Add ellipsis for better visual indication of overflow
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          Row(
-                            children: [
-                              Text('Дата события:'),
-                              SizedBox(width: 8),
-                              Text(dateEvent),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Text('Время начала:'),
-                              SizedBox(width: 8),
-                              Text(startTimeEvent),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Text('Статус:'),
-                              SizedBox(width: 8),
-                              Text(
-                                isRegistered ? 'Подтверждено' : 'Ожидает регистрации',
-                                style: TextStyle(
-                                  color: isRegistered ? Colors.green : Colors.red,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center, // Для размещения кнопок в начале и в конце строки
-                              children: [
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => ParticipantsDialog(
-                                        participants: participants,
-                                        organizerUid: organizerUid, currentUserUid: widget.userId, // Передайте UID организатора
-                                      ),
-                                    );
-                                  },
-                                  icon: Icon(Icons.group),
-                                  label: Text('Посмотреть участников'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.indigo,
-                                    textStyle: const TextStyle(
-                                      fontSize: 15.0,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Visibility(
-                                  visible: !isCurrentUserParticipant(participants, widget.userId),
-                                  child: ElevatedButton.icon(
-                                    onPressed: isJoinButtonVisible ? () {
-                                      // Получите UID текущего пользователя (замените на фактический способ получения UID текущего пользователя)
-                                      String currentUserId = widget.userId;
-                                      print('Текущий пользователь нажал на Присоединиться: $currentUserId');
-
-                                      // Проверьте, есть ли текущий пользователь уже в списке участников
-                                      bool isUserAlreadyParticipant = false;
-                                      for (var participant in participants) {
-                                        if (participant['uid'] == currentUserId) {
-                                          isUserAlreadyParticipant = true;
-                                          break;
-                                        }
-                                      }
-
-                                      // Если текущего пользователя еще нет в списке, добавьте его
-                                      if (!isUserAlreadyParticipant) {
-                                        String? firstNameParticipant = prefs.getString('firstName');
-                                        // Создайте нового участника
-                                        Map<String, String> newParticipant = {'uid': currentUserId, 'firstName': firstNameParticipant as String};
-
-                                        // Добавьте нового участника в список
-                                        participants.add(newParticipant);
-
-                                        // Вызовите функцию для присоединения к мероприятию
-                                        joinEvent(markerName, dateEvent, startTimeEvent, currentUserId, firstNameParticipant, organizerUid);
-                                      }
-                                    } : null,
-                                    icon: Icon(Icons.add),
-                                    label: Text('Присоединиться'),
+                                      );
+                                    },
+                                    child: Text('Создать событие'),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
+                                      backgroundColor: Colors.black38,
                                       textStyle: const TextStyle(
-                                        fontSize: 25.0,
+                                        fontSize: 22.0,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          )
-                          // Другие данные о событии
-                        ],
-                      ),
-                    ),
-                  );
-                  }
-                }
+                                  const Text('Все ивенты', style: TextStyle(color: Colors.black, fontSize: 18)),
 
-                                    });
+                                  const Text('Ивенты отмеченные красным цветом уже завершены,присоединиться невозможно\n', style: TextStyle(color: Colors.red, fontSize: 12)),
+                                  const Text('Прошедшие ивенты отображаются за последние 3 дня', style: TextStyle(color: Colors.red, fontSize: 12)),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      // Вызовите метод для обновления данных
+                                      _refreshData();
+                                      setState(() {
+                                      });
+                                    },
+                                    child: Text('Обновить данные'),
+                                  ),
 
-                                    // Отобразите все виджеты событий в столбце
-                                    return Column(
-                                      children: eventWidgets,
-                                    );
-                                  } else {
-                                    return Text('Событие не найдено');
-                                  }
-                                },
+                                  FutureBuilder<DocumentSnapshot>(
+                                    future: FirebaseFirestore.instance.collection('events').doc(name).get(),
+                                    builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> eventSnapshot) {
+                                      if (eventSnapshot.connectionState == ConnectionState.waiting) {
+                                        return CircularProgressIndicator();
+                                      } else if (eventSnapshot.hasError) {
+                                        return Text('Произошла ошибка: ${eventSnapshot.error}');
+                                      } else if (eventSnapshot.hasData) {
+                                        final eventData = eventSnapshot.data!.data();
+                                        if (eventData == null || eventData is! Map<String, dynamic>) {
+                                          return Text('Событий не найдено');
+                                        }
+
+                                        const Text('Доступные мероприятия на', style: TextStyle(color: Colors.black, fontSize: 18));
+                                        Text(
+                                          selectedDate != null
+                                              ? ' ${DateFormat('dd.MM.yyyy').format(selectedDate!)}'
+                                              : 'Выберите дату', // Отобразить "Выберите дату", если дата не выбрана
+                                          style: TextStyle(color: Colors.black, fontSize: 18),
+                                        );
+                                        final eventsList = (eventData['events'] as List<dynamic>?) ?? [];
+
+                                        // Создайте список виджетов для отображения данных о событиях
+                                        List<Widget> eventWidgets = [];
+
+                                        eventsList.forEach((event) {
+                                          final type = event['type'];
+                                          final markerName = event['eventName'];
+                                          final dateEvent = event['dateEvent'];
+                                          final startTimeEvent = event['startTimeEvent'];
+                                          final isRegistered = event['isRegistered'];
+                                          final organizer = event['organizer'];
+                                          final organizerUid = event['uid'];
+                                           List<dynamic> participantsData = (event['participants'] as List<dynamic>?) ?? [];
+                                           List<Map<String, String>> participants = participantsData.map((participant) {
+                                             Map<String, dynamic> participantData = participant as Map<String, dynamic>;
+
+                                            // Извлекаем uid и firstName из данных участника
+                                            final String uid = participantData['uid'] as String;
+                                            final String firstName = participantData['firstName'] as String;
+
+                                            return {'uid': uid, 'firstName': firstName};
+                                          }).toList();
+                                          DateTime currentDate = DateTime.now();
+                                          DateTime twentyFourHoursAgo = currentDate.subtract(Duration(hours: 24));
+                                          DateTime eventDate = DateFormat('dd.MM.yyyy').parse(dateEvent);
+                                          String currentDateFormatted = DateFormat('dd.MM.yyyy').format(currentDate);
+                                          String eventDateFormatted = DateFormat('dd.MM.yyyy').format(eventDate);
+
+                                          bool isSameDate = currentDateFormatted == eventDateFormatted; // проверка на день
+                                          final eventTime = TimeOfDay.fromDateTime(DateTime.parse("2023-10-27 $startTimeEvent:00"));
+                                          bool isWithinLast24Hours = eventDate.isAfter(twentyFourHoursAgo);
+                                          Duration timeDifference = currentDate.difference(eventDate);
+
+
+                                          final currentTime = TimeOfDay.now();
+
+
+                                          print('$timeDifference.inDays $eventDate');
+
+
+                                          if (!isSameDate && !isDateInFuture(dateEvent)) {
+                                            if(!isDateInPast(dateEvent, 2)) {
+                                              eventWidgets.add(
+                                                InkWell(
+                                                  child: Column(
+                                                    children: [
+                                                      SizedBox(height: 16.0),
+                                                      Row(
+                                                        children: [
+                                                          Text('Тип события:'),
+                                                          SizedBox(width: 8),
+                                                          Text(type),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text('Имя организатора:'),
+                                                          SizedBox(width: 8),
+                                                          Text(organizer),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text('Участники:'),
+                                                          SizedBox(width: 8),
+                                                          Text(
+                                                            participants.map((
+                                                                participant) => participant['firstName'])
+                                                                .join(', '),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text('Дата события:'),
+                                                          SizedBox(width: 8),
+                                                          Text(dateEvent),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text('Время начала:'),
+                                                          SizedBox(width: 8),
+                                                          Text(startTimeEvent),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text('Статус:'),
+                                                          SizedBox(width: 8),
+                                                          Text(
+                                                            isRegistered ? 'Подтверждено' : 'Ожидает регистрации',
+                                                            style: TextStyle(
+                                                              color: isRegistered ? Colors.green : Colors.red,
+                                                              fontWeight: FontWeight.bold,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      SingleChildScrollView(
+                                                        scrollDirection: Axis.horizontal,
+                                                        child: Row(
+                                                          mainAxisAlignment: MainAxisAlignment.center,
+                                                          // Для размещения текста по центру
+                                                          children: [
+                                                            Text(
+                                                              'Данное мероприятие закончено\n$eventDateFormatted\nРегистрация невозможна',
+                                                              style: TextStyle(
+                                                                color: Colors.red,
+                                                                fontSize: 17.0,
+                                                                fontWeight: FontWeight.bold,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            }
+
+                                          }else if(isDateInFuture(dateEvent) || isSameDate){
+                                            if (isSameDate && isEventExpired(startTimeEvent)) {
+                                              final eventHour = eventTime.hour;
+                                              final eventMinute = eventTime.minute;
+                                              final currentHour = currentTime.hour;
+                                              final currentMinute = currentTime.minute;
+
+                                              final hoursDiff =   currentHour - eventHour ;
+                                              eventWidgets.add(
+                                                InkWell(
+                                                  child: Column(
+                                                    children: [
+                                                      SizedBox(height: 16.0),
+                                                      Row(
+                                                        children: [
+                                                          Text('Тип события:'),
+                                                          SizedBox(width: 8),
+                                                          Text(type),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text('Имя организатора:'),
+                                                          SizedBox(width: 8),
+                                                          Text(organizer),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text('Участники:'),
+                                                          SizedBox(width: 8),
+                                                          Text(
+                                                            participants.map((participant) => participant['firstName']).join(', '),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text('Дата события:'),
+                                                          SizedBox(width: 8),
+                                                          Text(dateEvent),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text('Время начала:'),
+                                                          SizedBox(width: 8),
+                                                          Text(startTimeEvent),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text('Статус:'),
+                                                          SizedBox(width: 8),
+                                                          Text(
+                                                            isRegistered ? 'Подтверждено' : 'Ожидает регистрации',
+                                                            style: TextStyle(
+                                                              color: isRegistered ? Colors.green : Colors.red,
+                                                              fontWeight: FontWeight.bold,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      SingleChildScrollView(
+                                                        scrollDirection: Axis.horizontal,
+                                                        child: Row(
+                                                          mainAxisAlignment: MainAxisAlignment.center, // Для размещения текста по центру
+                                                          children: [
+                                                            Text(
+                                                              'Мероприятие уже идёт\n~ $hoursDiff часов\nНо вы всё еще можете присоединится',
+                                                              style: TextStyle(
+                                                                color: Colors.red,
+                                                                fontSize: 14.0,
+                                                                fontWeight: FontWeight.bold,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      SingleChildScrollView(
+                                                        scrollDirection: Axis.horizontal,
+                                                        child: Row(
+                                                          mainAxisAlignment: MainAxisAlignment.center, // Для размещения кнопок в начале и в конце строки
+                                                          children: [
+                                                            Visibility(
+                                                              visible: !isCurrentUserParticipant(participants, widget.userId),
+                                                              // Промежуток между кнопками
+                                                              child: ElevatedButton.icon(
+                                                                onPressed: () {
+                                                                  String currentUserId = widget.userId;
+                                                                  print('Текущий пользователь нажал на Присоединиться: $currentUserId');
+
+                                                                  // Проверьте, есть ли текущий пользователь уже в списке участников
+                                                                  bool isUserAlreadyParticipant = false;
+                                                                  for (var participant in participants) {
+                                                                    if (participant['uid'] == currentUserId) {
+                                                                      isUserAlreadyParticipant = true;
+                                                                      break;
+                                                                    }
+                                                                  }
+
+                                                                  // Если текущего пользователя еще нет в списке, добавьте его
+                                                                  if (!isUserAlreadyParticipant) {
+                                                                    String? firstNameParticipant = prefs.getString('firstName');
+                                                                    // Создайте нового участника
+                                                                    Map<String, String> newParticipant = {'uid': currentUserId, 'firstName': firstNameParticipant as String};
+
+                                                                    // Добавьте нового участника в список
+                                                                    participants.add(newParticipant);
+
+                                                                    // Вызовите функцию для присоединения к мероприятию
+                                                                    joinEvent(markerName, dateEvent, startTimeEvent, currentUserId, firstNameParticipant, organizerUid,event['eventId']);
+                                                                  }
+                                                                },
+
+                                                                icon: Icon(Icons.add), // Иконка "плюс"
+                                                                label: Text('Присоединиться 11'),
+                                                                style: ElevatedButton.styleFrom(
+                                                                  backgroundColor: Colors.green,
+                                                                  textStyle: const TextStyle(
+                                                                    fontSize: 25.0,
+                                                                    fontWeight: FontWeight.bold,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      )
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            } else {
+                                              eventWidgets.add(
+                                                InkWell(
+                                                  child: Column(
+                                                    children: [
+                                                      SizedBox(height: 16.0),
+                                                      Row(
+                                                        children: [
+                                                          Text('Тип события:'),
+                                                          SizedBox(width: 8),
+                                                          Text(type),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text('Имя организатора:'),
+                                                          SizedBox(width: 8),
+                                                          Text(organizer),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text('Участники:'),
+                                                          SizedBox(width: 8),
+                                                          Expanded(
+                                                            child: Text(
+                                                              participants.map((participant) => participant['firstName']).join(', '),
+                                                              overflow: TextOverflow.ellipsis, // Add ellipsis for better visual indication of overflow
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+
+                                                      Row(
+                                                        children: [
+                                                          Text('Дата события:'),
+                                                          SizedBox(width: 8),
+                                                          Text(dateEvent),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text('Время начала:'),
+                                                          SizedBox(width: 8),
+                                                          Text(startTimeEvent),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        children: [
+                                                          Text('Статус:'),
+                                                          SizedBox(width: 8),
+                                                          Text(
+                                                            isRegistered ? 'Подтверждено' : 'Ожидает регистрации',
+                                                            style: TextStyle(
+                                                              color: isRegistered ? Colors.green : Colors.red,
+                                                              fontWeight: FontWeight.bold,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      SingleChildScrollView(
+                                                        scrollDirection: Axis.horizontal,
+                                                        child: Row(
+                                                          mainAxisAlignment: MainAxisAlignment.center, // Для размещения кнопок в начале и в конце строки
+                                                          children: [
+                                                            ElevatedButton.icon(
+                                                              onPressed: () {
+                                                                showDialog(
+                                                                  context: context,
+                                                                  builder: (context) => ParticipantsDialog(
+                                                                    participants: participants,
+                                                                    organizerUid: organizerUid, currentUserUid: widget.userId, // Передайте UID организатора
+                                                                  ),
+                                                                );
+                                                              },
+                                                              icon: Icon(Icons.group),
+                                                              label: Text('Посмотреть участников'),
+                                                              style: ElevatedButton.styleFrom(
+                                                                backgroundColor: Colors.indigo,
+                                                                textStyle: const TextStyle(
+                                                                  fontSize: 15.0,
+                                                                  fontWeight: FontWeight.bold,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+
+
+
+                                                      SingleChildScrollView(
+                                                        scrollDirection: Axis.horizontal,
+                                                        child: Row(
+                                                          mainAxisAlignment: MainAxisAlignment.center,
+                                                          children: [
+                                                            Visibility(
+                                                              visible: isCurrentUserParticipant(participants, widget.userId),
+                                                              child: FutureBuilder<String>(
+                                                                future: getUnreadMessageCount(event, widget.userId),
+                                                                builder: (context, snapshot) {
+                                                                  if (snapshot.connectionState == ConnectionState.waiting) {
+                                                                    return CircularProgressIndicator(); // Или другой индикатор загрузки
+                                                                  } else if (snapshot.hasError) {
+                                                                    return Text('Ошибка: ${snapshot.error}');
+                                                                  } else {
+                                                                    String unreadMessageCount = snapshot.data ?? "";
+                                                                    return ElevatedButton.icon(
+                                                                      onPressed: isJoinButtonVisible
+                                                                          ? () {
+                                                                        showDialog(
+                                                                          context: context,
+                                                                          builder: (context) => EventConversation(
+                                                                            eventId: event['eventId'], // Передайте UID организатора
+                                                                          ),
+                                                                        );
+                                                                      }
+                                                                          : null,
+                                                                      icon: Icon(Icons.add),
+                                                                      label: Text('Открыть чат$unreadMessageCount'),
+                                                                      style: ElevatedButton.styleFrom(
+                                                                        backgroundColor: Colors.green,
+                                                                        textStyle: const TextStyle(
+                                                                          fontSize: 25.0,
+                                                                          fontWeight: FontWeight.bold,
+                                                                        ),
+                                                                      ),
+                                                                    );
+                                                                  }
+                                                                },
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      SingleChildScrollView(
+                                                        scrollDirection: Axis.horizontal,
+                                                        child: Row(
+                                                          mainAxisAlignment: MainAxisAlignment.center,
+                                                          children: [
+                                                            Visibility(
+                                                              visible: !isCurrentUserParticipant(participants, widget.userId),
+                                                              child: ElevatedButton.icon(
+                                                                onPressed: isJoinButtonVisible ? () async {
+                                                                  // Получите UID текущего пользователя (замените на фактический способ получения UID текущего пользователя)
+                                                                  String currentUserId = widget.userId;
+                                                                  print('Текущий пользователь нажал на Присоединиться: $currentUserId');
+
+                                                                  // Проверьте, есть ли текущий пользователь уже в списке участников
+                                                                  bool isUserAlreadyParticipant = false;
+                                                                  for (var participant in participants) {
+                                                                    if (participant['uid'] == currentUserId) {
+                                                                      isUserAlreadyParticipant = true;
+                                                                      break;
+                                                                    }
+                                                                  }
+
+                                                                  // Если текущего пользователя еще нет в списке, добавьте его
+                                                                  if (!isUserAlreadyParticipant) {
+                                                                    String? firstNameParticipant = prefs.getString('firstName');
+                                                                    // Создайте нового участника
+                                                                    Map<String, String> newParticipant = {'uid': currentUserId, 'firstName': firstNameParticipant as String};
+
+                                                                    // Добавьте нового участника в список
+                                                                    participants.add(newParticipant);
+
+                                                                    // Вызовите функцию для присоединения к мероприятию
+                                                                      await joinEvent(markerName, dateEvent, startTimeEvent, currentUserId, firstNameParticipant, organizerUid,event['eventId']);
+                                                                    setState(() {
+                                                                    });
+
+                                                                  }
+                                                                } : null,
+                                                                icon: Icon(Icons.add),
+                                                                label: Text('Присоединиться'),
+                                                                style: ElevatedButton.styleFrom(
+                                                                  backgroundColor: Colors.green,
+                                                                  textStyle: const TextStyle(
+                                                                    fontSize: 25.0,
+                                                                    fontWeight: FontWeight.bold,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      )
+                                                      // Другие данные о событии
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          }
+
+                                        });
+
+                                        // Отобразите все виджеты событий в столбце
+                                        return Column(
+                                          children: eventWidgets,
+                                        );
+                                      } else {
+                                        return Text('Событие не найдено');
+                                      }
+                                    },
+                                  ),
+
+                                ],
                               ),
+                              );
+                            }
+                          },
 
-                            ],
-                          );
-                        }
-                      },
-                    ),
-                    ),
-                  ),
-                ),
+
+
                 );
+                  }
+                ));
               },
             );
           },
@@ -811,18 +935,21 @@ class MapsPageState extends State<MapsPage> {
 
 
         setState(() {
-           _markers.add(marker);
+          _markers.add(marker);
 
           _textMarkers.add(TextMarker(
             position: LatLng(coordinates.latitude,coordinates.longitude),
             text: name,
           ));
 
-           _addTextMarkersToMap();
+          _addTextMarkersToMap();
         });
       });
     });
   }
+
+
+
 
 
   Future<void> updateEventParticipants(String markerName, List<Map<String, String>> participants, String dateEvent, String startTimeEvent) async {
@@ -871,7 +998,7 @@ class MapsPageState extends State<MapsPage> {
     return false;
   }
 
-  Future<void> joinEvent(String markerName, String dateEvent, String startTimeEvent, String currentUserId, String firstNameParticipant,String organizerUid) async {
+  Future<void> joinEvent(String markerName, String dateEvent, String startTimeEvent, String currentUserId, String firstNameParticipant,String organizerUid,String eventId) async {
     try {
       DocumentReference docRef = FirebaseFirestore.instance.collection('events').doc(markerName);
 
@@ -895,7 +1022,7 @@ class MapsPageState extends State<MapsPage> {
             // Обновите только конкретное событие
             events[i]['participants'] = participants;
             await docRef.update({'events': events});
-
+            sendMessage('присоединился к мероприятию',eventId);
             print('Участник успешно добавлен к событию');
             return;
           }
@@ -906,6 +1033,46 @@ class MapsPageState extends State<MapsPage> {
     } catch (error) {
       print('Произошла ошибка: $error');
     }
+  }
+
+  void sendMessage(String messageText,String eventId) async {
+    User? user = FirebaseAuth.instance.currentUser;
+    String? sender = user?.uid;
+    CollectionReference messagesCollection =
+    FirebaseFirestore.instance.collection('eventMessages');
+
+    if (messageText.isNotEmpty) {
+      String senderName = await getSenderFirstName(sender!) ?? 'Аноним';
+
+      // Добавление сообщения в чат
+      await messagesCollection.doc(eventId).collection('messages').add({
+        'message': '$senderName $messageText',
+        'senderId': '12345',
+        'senderName': 'system',
+        'isChanged':false,
+        'docId':'System docId',
+        'messageId':'System message',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+    }
+  }
+
+
+  Future<String?> getSenderFirstName(String senderId) async {
+    try {
+      final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+      DocumentSnapshot<Map<String, dynamic>> userSnapshot =
+      await _firestore.collection('users').doc(senderId).get();
+
+      if (userSnapshot.exists) {
+        return userSnapshot.data()?['firstName'];
+      }
+    } catch (e) {
+      print('Ошибка при получении данных пользователя: $e');
+    }
+
+    return null;
   }
 
 
@@ -934,7 +1101,7 @@ class MapsPageState extends State<MapsPage> {
 
       if (locationQuerySnapshot.docs.isNotEmpty) {
         // Получите документ, который содержит информацию о событиях
-        final eventDocument = await events.doc('Black Pool').get();
+        final eventDocument = await events.doc(nameToCheck).get();
 
         if (eventDocument.exists) {
           // Проверьте поле 'events' на наличие объектов с полем 'name'
@@ -1156,6 +1323,8 @@ class MapsPageState extends State<MapsPage> {
 
 
 class ParticipantsDialog extends StatelessWidget {
+  CollectionReference<Map<String, dynamic>> events =
+  FirebaseFirestore.instance.collection('events');
   final List<Map<String, String>> participants;
   final String organizerUid;
   final String currentUserUid; // UID текущего пользователя
