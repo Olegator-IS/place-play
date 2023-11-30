@@ -233,6 +233,52 @@ class MapsPageState extends State<MapsPage> {
     await _loadUserData();
   }
 
+
+  Future<String> getUnreadMessageCount(Map<String, dynamic> eventList, String currentUserId) async {
+    String unreadMessageCount = "";
+    int unreadMessage = 0;
+    List<String> test = [];
+    for (var eventEntry in eventList.entries) {
+      String eventId = eventEntry.key;
+      if(eventId.contains('eventId')){
+        test.add(eventEntry.value);
+
+
+      }
+    }
+    for (int i=0;i<test.length;i++) {
+      print(test[i]);
+      CollectionReference<Map<String, dynamic>> eventMessagesCollection =
+      FirebaseFirestore.instance.collection('eventMessages').doc(test[i]).collection('messages');
+      print('Сколько сообщений $eventMessagesCollection');
+      // Получаем все сообщения для текущего события
+      QuerySnapshot<Map<String, dynamic>> messagesSnapshot =
+      await eventMessagesCollection.get();
+
+      print('TTTTTTTTTTT124$messagesSnapshot');
+
+      for (QueryDocumentSnapshot<Map<String, dynamic>> messageDoc in messagesSnapshot.docs) {
+        print('1241241241');
+        Map<String, dynamic> message = messageDoc.data();
+        List<dynamic>? readBy = message['readBy'] as List<dynamic>?;
+        print(readBy);
+
+        // Если readBy не содержит currentUserId, увеличиваем счетчик непрочитанных сообщений
+        if (readBy == null || !readBy.contains(currentUserId)) {
+          unreadMessage++;
+          unreadMessageCount = '(+$unreadMessage)';
+          print(unreadMessage);
+          if(unreadMessage == 0){
+            unreadMessageCount = "";
+          }
+        }
+      }
+    }
+
+
+    return unreadMessageCount;
+  }
+
   Future<void> _fetchLocationsFromFirestore() async {
     final String firstNameUser;
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -760,27 +806,38 @@ class MapsPageState extends State<MapsPage> {
                                                           children: [
                                                             Visibility(
                                                               visible: isCurrentUserParticipant(participants, widget.userId),
-                                                              child: ElevatedButton.icon(
-                                                                onPressed: isJoinButtonVisible ? () {
-
-                                                                  showDialog(
-                                                                    context: context,
-                                                                    builder: (context) => EventConversation(
-                                                                      eventId: event['eventId'], // Передайте UID организатора
-                                                                    ),
-                                                                  );
-
-
-                                                                } : null,
-                                                                icon: Icon(Icons.add),
-                                                                label: Text('Открыть чат'),
-                                                                style: ElevatedButton.styleFrom(
-                                                                  backgroundColor: Colors.green,
-                                                                  textStyle: const TextStyle(
-                                                                    fontSize: 25.0,
-                                                                    fontWeight: FontWeight.bold,
-                                                                  ),
-                                                                ),
+                                                              child: FutureBuilder<String>(
+                                                                future: getUnreadMessageCount(event, widget.userId),
+                                                                builder: (context, snapshot) {
+                                                                  if (snapshot.connectionState == ConnectionState.waiting) {
+                                                                    return CircularProgressIndicator(); // Или другой индикатор загрузки
+                                                                  } else if (snapshot.hasError) {
+                                                                    return Text('Ошибка: ${snapshot.error}');
+                                                                  } else {
+                                                                    String unreadMessageCount = snapshot.data ?? "";
+                                                                    return ElevatedButton.icon(
+                                                                      onPressed: isJoinButtonVisible
+                                                                          ? () {
+                                                                        showDialog(
+                                                                          context: context,
+                                                                          builder: (context) => EventConversation(
+                                                                            eventId: event['eventId'], // Передайте UID организатора
+                                                                          ),
+                                                                        );
+                                                                      }
+                                                                          : null,
+                                                                      icon: Icon(Icons.add),
+                                                                      label: Text('Открыть чат$unreadMessageCount'),
+                                                                      style: ElevatedButton.styleFrom(
+                                                                        backgroundColor: Colors.green,
+                                                                        textStyle: const TextStyle(
+                                                                          fontSize: 25.0,
+                                                                          fontWeight: FontWeight.bold,
+                                                                        ),
+                                                                      ),
+                                                                    );
+                                                                  }
+                                                                },
                                                               ),
                                                             ),
                                                           ],
@@ -992,6 +1049,9 @@ class MapsPageState extends State<MapsPage> {
         'message': '$senderName $messageText',
         'senderId': '12345',
         'senderName': 'system',
+        'isChanged':false,
+        'docId':'System docId',
+        'messageId':'System message',
         'timestamp': FieldValue.serverTimestamp(),
       });
 
@@ -1041,7 +1101,7 @@ class MapsPageState extends State<MapsPage> {
 
       if (locationQuerySnapshot.docs.isNotEmpty) {
         // Получите документ, который содержит информацию о событиях
-        final eventDocument = await events.doc('Black Pool').get();
+        final eventDocument = await events.doc(nameToCheck).get();
 
         if (eventDocument.exists) {
           // Проверьте поле 'events' на наличие объектов с полем 'name'
