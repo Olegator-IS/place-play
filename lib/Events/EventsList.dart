@@ -542,12 +542,24 @@ void sendMessage(String messageText,String eventId) async {
     String senderName = await getSenderFirstName(sender!) ?? 'Аноним';
 
     // Добавление сообщения в чат
+    DocumentReference<Map<String, dynamic>> newMessageRef =
     await messagesCollection.doc(eventId).collection('messages').add({
       'message': '$senderName $messageText',
       'senderId': '12345',
       'senderName': 'system',
+      'docId':eventId,
+      'isChanged':false,
+      'messageId':'',
       'timestamp': FieldValue.serverTimestamp(),
+      'readBy': [user?.uid],
     });
+
+    String messageId = newMessageRef.id;
+
+
+    // Обновляем messageId в добавленном сообщении
+    await newMessageRef.update({'messageId': messageId});
+
 
   }
 }
