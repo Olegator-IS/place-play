@@ -1,7 +1,8 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:placeandplay/EmptyScreen.dart';
 import 'package:placeandplay/ProfileScreens/RegistrationProfilePage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
@@ -9,6 +10,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 
+
+
+import '../PresenceService.dart';
 import '../RegistrationScreens/ForgotPasswordScreen.dart';
 import '../ProfileScreens/ProfileScreen.dart';
 import '../RegistrationScreens/RegistrationPage.dart';
@@ -18,7 +22,11 @@ class LoginPage extends StatefulWidget {
   _LoginPageState createState() => _LoginPageState();
 }
 
+
+
 class _LoginPageState extends State<LoginPage> {
+  StreamSubscription<DocumentSnapshot>? _presenceSubscription;
+  bool _isOnline = false;
   bool _passwordVisible = false;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _emailController = TextEditingController();
@@ -104,6 +112,9 @@ class _LoginPageState extends State<LoginPage> {
             if (userProfileSnapshot.exists) {
               // userProfiles существует для пользователя
               // Остальная часть кода
+
+
+
               print('Профиль пользователя существует');
               Navigator.pushReplacement(context,
                   MaterialPageRoute(builder: (context) => ProfileScreen(userId: uid)));
@@ -188,6 +199,7 @@ class _LoginPageState extends State<LoginPage> {
         // Получите UID пользователя
         String uid = user.uid;
 
+
         // Запросите документ пользователя в коллекции "users"
         DocumentSnapshot userSnapshot = await FirebaseFirestore.instance.collection('users').doc(uid).get();
         print('testtttt');
@@ -206,11 +218,19 @@ class _LoginPageState extends State<LoginPage> {
 
           if (userData != null && userProfileSnapshot.exists) {
             // userProfiles существует для пользователя
-            print('Профиль пользователя существует');
+            print('Профиль пользователя существует22');
+            await PresenceService.setUserOnline(uid);
+
+            _presenceSubscription = PresenceService.streamUserPresence(uid).listen((DocumentSnapshot snapshot) {
+              bool isOnline = snapshot.exists ? snapshot.get('online') : false;
+              print('User is online: $isOnline');
+              setState(() {
+                _isOnline = isOnline;
+              });
+            });
             // Теперь у вас есть 'userProfiles' пользователя
             // Проверьте его заполненность (например, наличие данных)
             List<dynamic>? userProfileData = userData['userProfiles'] as List<dynamic>?;
-
               // userProfiles заполнен, перенаправляем на ProfileScreen
               Navigator.pushReplacement(
                 context,
@@ -280,6 +300,13 @@ class _LoginPageState extends State<LoginPage> {
   }
 
 
+  @override
+  void dispose() {
+    if (_presenceSubscription != null) {
+      _presenceSubscription!.cancel();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -487,6 +514,8 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+
+
 
 void main() {
   runApp(MaterialApp(

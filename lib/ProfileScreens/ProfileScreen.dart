@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
@@ -16,6 +19,7 @@ import 'dart:ui' as ui;
 
 import '../Events/EventsList.dart';
 import '../MapScreens/MapsPage.dart';
+import '../PresenceService.dart';
 import 'AvatarViewScreen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -54,6 +58,10 @@ class ProfileTitle extends StatelessWidget {
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
 
+  bool _isOnline = false;
+  late StreamSubscription<DocumentSnapshot> _presenceSubscription;
+
+
   final audioCache = AudioCache();
   final audioFilePath = 'audio/swipe.mp3'; // Путь к вашему аудиофайлу в папке assets
   int _currentIndex = 0;
@@ -74,6 +82,15 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
+    print('testttttttttttttttttttttttt123');
+    _presenceSubscription = PresenceService.streamUserPresence(widget.userId).listen((DocumentSnapshot snapshot) {
+      if (snapshot.exists) {
+        setState(() {
+          _isOnline = (snapshot.data() as Map<String, dynamic>?)?['online'] ?? false;
+        });
+      }
+    });
+
     _loadAvatarURL();
 
     // Создайте анимацию и контроллер
@@ -205,6 +222,9 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   void dispose() {
+    if (_presenceSubscription != null) {
+      _presenceSubscription!.cancel();
+    }
     _animationController.dispose();
     super.dispose();
   }
@@ -482,6 +502,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8.0),
+                    Container(
+                      width: 16.0, // Вы можете настроить размер круга
+                      height: 16.0,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _isOnline ? Colors.green : Colors.grey, // Зеленый, если онлайн, иначе серый
                       ),
                     ),
                     SizedBox(height: 8.0),

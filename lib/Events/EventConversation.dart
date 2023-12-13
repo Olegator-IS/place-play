@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +9,8 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:placeandplay/ProfileScreens/ViewProfileScreen.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+import '../PresenceService.dart';
 
 
 
@@ -24,6 +28,8 @@ String messageIdForEdit = '';
 String docIdForDelete = '';
 String eventIdForDelete = '';
 class _EventConversationState extends State<EventConversation> {
+  bool _isOnline = false;
+  late StreamSubscription<DocumentSnapshot> _presenceSubscription;
   String get eventId => widget.eventId;
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
   FlutterLocalNotificationsPlugin();
@@ -41,6 +47,14 @@ class _EventConversationState extends State<EventConversation> {
   void initState() {
     super.initState();
     eventIdForDelete = widget.eventId;
+    String? sender = user?.uid;
+    _presenceSubscription = PresenceService.streamUserPresence(sender!).listen((DocumentSnapshot snapshot) {
+      if (mounted && snapshot.exists) {
+        setState(() {
+          _isOnline = (snapshot.data() as Map<String, dynamic>?)?['online'] ?? false;
+        });
+      }
+    });
     // Добавляем слушатель при создании виджета
     // _initPlatformState();
     // _registerBroadcastReceiver();
@@ -167,6 +181,7 @@ class _EventConversationState extends State<EventConversation> {
                             isChanged: messageData['isChanged'],
                             messageId: messageData['messageId'],
                             docId: messageData['docId'],
+                            isOnline: _isOnline,
                           );
                         }else{
                           return const SpinKitFadingCircle(
@@ -352,6 +367,7 @@ class MessageBubble extends StatelessWidget {
   final bool isChanged;
   final String messageId;
   final String docId;
+  final bool isOnline;
 
   MessageBubble({
     required this.message,
@@ -363,6 +379,7 @@ class MessageBubble extends StatelessWidget {
     required this.isChanged,
     required this.messageId,
     required this.docId,
+    required this.isOnline,
   });
 
 
@@ -391,7 +408,7 @@ class MessageBubble extends StatelessWidget {
                 CollectionReference messagesCollection =
                 FirebaseFirestore.instance.collection('eventMessages');
                 // Обновите сообщение в базе данных
-                messagesCollection.doc('Black Pool-4295fe56-d1ad-4391-8d6f-73b92499b549')
+                messagesCollection.doc(docId)
                     .collection('messages')
                     .doc(messageId) // messageId - уникальный идентификатор сообщения
                     .update({

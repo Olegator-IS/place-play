@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:placeandplay/EmptyScreen.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Импорт пакета shared_preferences
+import '../PresenceService.dart';
 import 'LoginPage.dart';
 import '../ProfileScreens/ProfileScreen.dart';
 import '../ProfileScreens/RegistrationProfilePage.dart';
@@ -14,6 +17,8 @@ class HelloLayout extends StatefulWidget {
 }
 
 class _HelloLayoutState extends State<HelloLayout> {
+  StreamSubscription<DocumentSnapshot>? _presenceSubscription;
+  bool _isOnline = false;
   String _greetingText = '';
   String username = '';
   String firstName = '';
@@ -115,6 +120,18 @@ class _HelloLayoutState extends State<HelloLayout> {
           // userProfiles существует для пользователя
           // Остальная часть кода
           print('Профиль пользователя существует');
+          await PresenceService.setUserOnline(uid);
+
+          _presenceSubscription = PresenceService.streamUserPresence(uid).listen((DocumentSnapshot snapshot) {
+            if (mounted) {
+              bool isOnline = snapshot.exists ? snapshot.get('online') : false;
+              print('User is online: $isOnline');
+              setState(() {
+                _isOnline = isOnline;
+              });
+            }
+          });
+
           Future.delayed(Duration(seconds: 3), ()
           {
             Navigator.pushReplacement(context,
@@ -188,6 +205,14 @@ class _HelloLayoutState extends State<HelloLayout> {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginPage()));
       });
     }
+  }
+
+  @override
+  void dispose() {
+    if (_presenceSubscription != null) {
+      _presenceSubscription!.cancel();
+    }
+    super.dispose();
   }
 
   @override
