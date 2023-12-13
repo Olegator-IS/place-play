@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'package:intl/intl.dart';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -16,6 +19,7 @@ import 'dart:ui' as ui;
 
 
 import '../MapScreens/MapsPage.dart';
+import '../PresenceService.dart';
 import 'AvatarViewScreen.dart';
 import 'ProfileScreen.dart';
 
@@ -57,7 +61,10 @@ class _ViewProfileScreenState extends State<ViewProfileScreen>
   final audioCache = AudioCache();
   final audioFilePath = 'audio/swipe.mp3'; // Путь к вашему аудиофайлу в папке assets
 
+  bool _isOnline = false;
+  DateTime? _lastOnline;
 
+  late StreamSubscription<DocumentSnapshot> _presenceSubscription;
   int _currentIndex = 0;
   DocumentSnapshot? userDataSnapshot;
   String? avatarURL;
@@ -76,12 +83,29 @@ class _ViewProfileScreenState extends State<ViewProfileScreen>
   @override
   void initState() {
     super.initState();
+    _presenceSubscription = PresenceService.streamUserPresence(widget.userId).listen((DocumentSnapshot snapshot) {
+      if (mounted && snapshot.exists) {
+        final data = snapshot.data() as Map<String, dynamic>?;
+
+        setState(() {
+          _isOnline = data?['online'] ?? false;
+
+          // Если статус "offline", получите время последнего входа
+          if (!_isOnline) {
+            _lastOnline = data?['lastOnline'] != null
+                ? (data?['lastOnline'] as Timestamp).toDate()
+                : null;
+          }
+        });
+      }
+    });
+
+
     _loadAvatarURL();
 
-    // Создайте анимацию и контроллер
     _animationController = AnimationController(
       vsync: this,
-      duration: Duration(seconds: 3), // Уменьшена длительность анимации
+      duration: Duration(seconds: 3),
     );
 
     _rotationAnimation = Tween<double>(
@@ -89,12 +113,14 @@ class _ViewProfileScreenState extends State<ViewProfileScreen>
       end: 360,
     ).animate(_animationController);
 
-    // Добавьте слушателя, чтобы обновить виджет при завершении анимации
     _animationController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         _animationController.reset();
       }
     });
+
+    // Запустите анимацию при инициализации
+    _animationController.forward();
   }
 
 
@@ -127,6 +153,11 @@ class _ViewProfileScreenState extends State<ViewProfileScreen>
 
   @override
   void dispose() {
+    if (_presenceSubscription != null) {
+      _presenceSubscription!.cancel();
+    }
+
+    // Остановите анимацию перед удалением виджета
     _animationController.dispose();
     super.dispose();
   }
@@ -372,6 +403,40 @@ class _ViewProfileScreenState extends State<ViewProfileScreen>
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8.0),
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _isOnline ? Colors.green : Colors.grey,
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (_isOnline) ...[
+                              Text(
+                                'Онлайн',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ] else ...[
+                              SizedBox(height: 8.0),
+                              Text(
+                                _lastOnline != null
+                                    ? 'Последний вход: ${DateFormat.yMMMd().add_jm().format(_lastOnline!)}'
+                                    : 'Оффлайн',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
                     SizedBox(height: 8.0),
