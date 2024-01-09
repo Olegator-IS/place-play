@@ -1,9 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+
 
 class EventCreationForm extends StatefulWidget {
   final String organizer;
@@ -127,6 +134,7 @@ class _EventCreationFormState extends State<EventCreationForm> {
   final TextEditingController _eventTimeBeginController = TextEditingController();
   final TextEditingController _eventTimeEndController = TextEditingController();
   final TextEditingController _participants = TextEditingController();
+  String? token;
 
   @override
   void initState() {
@@ -135,10 +143,16 @@ class _EventCreationFormState extends State<EventCreationForm> {
     selectedDate = DateTime.now();
     startTime = TimeOfDay.now();
     endTime = TimeOfDay.now();
+
+    // Запрос токена устройства
+
     _refreshData();
   }
   Future<void> _loadUserData() async {
     try {
+      FirebaseMessaging messaging = FirebaseMessaging.instance;
+      token = await messaging.getToken();
+      print('FCM Device Token: $token');
       final snapshot = await FirebaseFirestore.instance.collection('events').doc().get();
       if (snapshot.exists) {
         setState(() {
@@ -154,23 +168,143 @@ class _EventCreationFormState extends State<EventCreationForm> {
       );
     }
   }
+  Future<List<dynamic>?> getUsersId(String eventType) async {
+    print('ПОЛУЧЕНННННННЫЙ UID EVENT TYPES $eventType');
+    try {
+      // Получение документа пользователя из коллекции subscriptions
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('subscriptions').doc(eventType).get();
+
+      print('snapshot prowel');
+      print('eventType $eventType');
+      // Извлечение массива userId из документа пользователя
+      List<dynamic>? usersId = (userDoc.data() as Map<String, dynamic>?)?['userId'];
+      print('USERS ID -> $usersId');
 
 
-  void subscribeToTopic(String topic) async {
-    await FirebaseMessaging.instance.subscribeToTopic(topic);
-    print('Пользователь подписан на тему: $topic');
-
-    // Создаем уведомление
-    RemoteMessage message = RemoteMessage(
-      data: {
-        'title': 'Новое уведомление',
-        'body': 'Это тестовое уведомление',
-      },
-    );
-
-    // Отправляем уведомление
-    await FirebaseMessaging.instance.sendMessage();
+      return usersId;
+    } catch (e) {
+      print('Error getting usersId: $e');
+      return null;
+    }
   }
+
+  Future<void> sendNotificationToSubscribers(List<dynamic> userIds, String title, String body) async {
+    for (String userId in userIds) {
+      try {
+        // Получаем документ пользователя из коллекции 'users'
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+
+        // Извлекаем токен пользователя
+        String? userToken = (userDoc.data() as Map<String, dynamic>?)?['fcmToken'];
+
+
+        print('userToken $userToken');
+        // Проверяем, есть ли токен
+        if (userToken != null) {
+          // Отправляем уведомление с использованием полученного токена
+          await sendNotification(userToken, title, body, userId);
+        } else {
+          print('Токен пользователя не найден для пользователя с UID $userId');
+        }
+      } catch (e) {
+        print('Ошибка при отправке уведомления пользователю с UID $userId: $e');
+      }
+    }
+  }
+
+  Future<bool> doesUserDocExist(String eventType) async {
+    try {
+      DocumentReference userDocRef = FirebaseFirestore.instance.collection('subscriptions').doc(eventType);
+      DocumentSnapshot userDocSnapshot = await userDocRef.get();
+      return userDocSnapshot.exists;
+    } catch (e) {
+      print('Error checking if user eventType exists: $e');
+      return false;
+    }
+  }
+
+  Future<void> sendPrepare(String token) async {
+    List<dynamic>? currentEventTypes = [];
+    List<dynamic>? usersId = [];
+    print('UID NOTIFICATION SENDER $widget.userId');
+    String uid = widget.userId;
+    String typeEn = widget.typeEn;
+
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'fcmToken': '2',
+    });
+
+    bool doesExist = await doesUserDocExist(typeEn);
+    if (doesExist) {
+      print('eventType exists.');
+      usersId = await getUsersId(typeEn);
+      print(usersId);
+    } else {
+      DocumentReference userDocRef = FirebaseFirestore.instance.collection('subscriptions').doc(typeEn);
+      usersId.add(uid);
+      // Добавляем информацию о пользователе в документ
+      await userDocRef.set({
+        'userId': usersId
+      });
+      print('User added to subscriptions successfully.');
+    }
+
+
+
+
+    print('Старый');
+    print(usersId);
+    if (!usersId!.contains(uid)) {
+      usersId?.add(uid);
+      print('Обновленный');
+      print(usersId);
+      await FirebaseFirestore.instance.collection('subscriptions').doc(typeEn).update({
+        'userId': usersId,
+      });
+    }
+
+
+//// Получаю список подписчиков данного спорта
+
+String place = widget.name.toUpperCase();
+    String game = widget.type.toUpperCase();
+    sendNotificationToSubscribers(usersId,'Появился новый ивент $game','Кто-то ищет компанию в $place\n'
+        'Чтобы сыграть в $game');
+
+
+
+  }
+
+
+  Future<void> sendNotification(String token, String title, String body, String sender) async {
+    final HttpsCallable sendNotificationCallable =
+    FirebaseFunctions.instance.httpsCallable('sendNotification');
+
+    print(token);
+
+    // Создаем объект payload
+    final payload = {
+      'token': token,
+      'title': title,
+      'body': body,
+      'sender': sender,
+
+    };
+
+    try {
+      final result = await sendNotificationCallable.call(payload);
+      // здесь вы можете обработать результат вызова
+    } catch (e) {
+      print('Error calling sendNotification: $e');
+    }
+  }
+
+  Future<void> subscribeToTopic(String topic) async {
+    await FirebaseMessaging.instance.subscribeToTopic(topic);
+    print('Пользователь подписан на топик: $topic');
+  }
+
+
 
 
 
@@ -508,6 +642,16 @@ class _EventCreationFormState extends State<EventCreationForm> {
             print(jsonData);
             print(widget.typeEn);
             subscribeToTopic(widget.typeEn.toString());
+            print('tokennnnnnnnnnnn $token');
+            String firstName = widget.firstName;
+            print('firstName$firstName');
+            String place = widget.name;
+            print('place$place');
+            String uid = widget.userId;
+            print('uid$uid');
+            // sendNotification(token!, 'Ура!Кто-то создал ивент', 'Пользователь$firstName Создал событие в $place',uid);
+            sendPrepare(token!);
+
 
 
             // Очистите форму и закройте диалог
