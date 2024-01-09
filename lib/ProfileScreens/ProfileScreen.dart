@@ -417,6 +417,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -712,7 +713,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                       children: [
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

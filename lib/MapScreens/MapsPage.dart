@@ -318,6 +318,7 @@ class MapsPageState extends State<MapsPage> {
         var address = data['address'];
         var phoneNumber = data['phoneNumber'];
         var type = data['typeRu'];
+        var typeEn = data['typeEn'];
 
         if (type == 'Бильярд') {
           markerColor =
@@ -402,6 +403,7 @@ class MapsPageState extends State<MapsPage> {
                                             activityType: type,
                                             userId: widget.userId,
                                             type: type,
+                                            typeEn: typeEn,
                                             address: address,
                                             name: name,
                                             phoneNumber: phoneNumber, firstName: firstName,

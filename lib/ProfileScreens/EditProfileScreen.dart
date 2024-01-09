@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:date_time_picker/date_time_picker.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -136,6 +137,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  void subscribeToTopic(String topic) async {
+    await FirebaseMessaging.instance.subscribeToTopic(topic);
+    print('Пользователь подписан на тему: $topic');
+  }
+
   void showStyledToast() {
     Fluttertoast.showToast(
         msg: "This is Center Short Toast",
@@ -156,6 +162,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return querySnapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
       return data['nameRu'] as String? ?? '';
+    }).toList();
+  }
+
+  Future<List<String>> getGamesInterestsFromFirestoreNotification() async {
+    final QuerySnapshot querySnapshot =
+    await FirebaseFirestore.instance.collection('listOfSports').get();
+    return querySnapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return data['nameEn'] as String? ?? '';
     }).toList();
   }
 
@@ -752,6 +767,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                             setState(() {
                                               _selectedGameInterest = value;
                                               _selectedGameInterests.add(value);
+
                                               _selectedGameInterest = null;
                                             });
                                           }
