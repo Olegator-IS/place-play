@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   @override
@@ -68,27 +69,49 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       await FirebaseAuth.instance.sendPasswordResetEmail(
         email: _emailController.text,
       );
-      // Уведомление о сбросе пароля
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Password reset email sent. Check your email to reset your password.'),
-          duration: Duration(seconds: 5),
-        ),
+
+      // Уведомление о сбросе пароля с использованием fluttertoast
+      Fluttertoast.showToast(
+        msg: 'Password reset email sent. Check your email to reset your password.',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        fontSize: 28.0,
       );
-      // Перенаправьте пользователя на экран авторизации или другой экран
+
+      // Перенаправление пользователя на экран авторизации или другой экран
       Navigator.pop(context); // Закрываем экран сброса пароля
     } catch (e) {
-      print('Error: $e');
+      String errorMessage = 'An error occurred. Please try again later.';
+
+      if (e is FirebaseAuthException) {
+        if (e.code == 'too-many-requests') {
+          // Обработка случая, когда слишком много запросов
+          errorMessage = 'We have blocked all requests from this device due to unusual activity. Try again later.';
+        } else {
+          // Обработка других кодов ошибок Firebase Authentication
+          errorMessage = 'Authentication error. Please check your credentials and try again.';
+        }
+      }
       // Ошибка сброса пароля
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Password reset failed. Please check your email address.'),
+          content: Text(
+              'Failed to reset password\nDetailed error:\n$errorMessage'),
           duration: Duration(seconds: 5),
+          backgroundColor: Colors.red,
+          elevation: 999,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.0),
+          ),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
   }
+
+
 
   @override
   void dispose() {
