@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:placeandplay/WelcomeScreens/LoginPage.dart';
 import 'package:placeandplay/RegistrationScreens/RegistrationPage.dart';
 import 'EmptyScreen.dart';
@@ -14,7 +15,52 @@ import 'package:flutter_app_badger/flutter_app_badger.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    print("Received message: ${message.notification?.title}");
+
+    // Отобразите уведомление
+    displayNotification(message);
+  });
+
+  FirebaseMessaging.onBackgroundMessage((message) {
+    print("Handling background message: ${message.notification?.title}");
+    // Добавьте здесь свой код для обработки уведомлений в фоновом режиме.
+    return Future<void>.value();
+  });
+
+
+
+  // Инициализация FlutterLocalNotificationsPlugin
+  const AndroidInitializationSettings androidInitializationSettings =
+  AndroidInitializationSettings('app_icon');
+  final InitializationSettings initializationSettings = InitializationSettings(
+    android: androidInitializationSettings,
+  );
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
   runApp(MyApp());
+}
+
+FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+FlutterLocalNotificationsPlugin();
+
+void displayNotification(RemoteMessage message) async {
+  var android = AndroidNotificationDetails(
+    'channel_id',
+    'channel_name',
+    importance: Importance.max,
+    priority: Priority.high,
+  );
+  var platform = NotificationDetails(android: android);
+
+  await flutterLocalNotificationsPlugin.show(
+    0,
+    message.notification?.title,
+    message.notification?.body,
+    platform,
+    payload: 'Custom_Sound', // Настройте дополнительные параметры по вашему выбору
+  );
 }
 
 class MyApp extends StatelessWidget {

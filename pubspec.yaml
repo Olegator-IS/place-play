@@ -59,9 +59,10 @@ dependencies:
   marquee: ^2.0.5
   emoji_picker_flutter: ^1.1.0
   flutter_spinkit: ^5.0.0
-  firebase_messaging: ^14.6.9
+  firebase_messaging: ^14.7.5
   rxdart: ^0.27.2
-  firebase_dynamic_links: ^5.4.8
+  cloud_functions: ^4.6.0
+#  firebase_dynamic_links: ^5.4.8
 
 
 

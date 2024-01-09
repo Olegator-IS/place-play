@@ -1,33 +1,33 @@
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
 admin.initializeApp();
 
-exports.sendChatNotification = functions.firestore
-  .document('eventMessages/{eventId}/messages/{messageId}')
-  .onCreate(async (snapshot, context) => {
-    const eventId = context.params.eventId;
-    const messageData = snapshot.data();
-    const senderName = messageData.senderName;
+exports.sendNotification = functions.https.onCall(async (data, context) => {
+  try {
+    const {token, title, body, sender} = data;
+    console.log("Token:", token);
+    console.log("Title:", title);
+    console.log("Sender:", sender);
 
-    // Получите токены устройств для всех пользователей, участвующих в событии
-    const deviceTokens = await getDeviceTokensForEvent(eventId);
+    if (!token || !title || !sender) {
+      throw new Error("Не все обязательные параметры предоставлены");
+    }
 
-    // Отправьте уведомление каждому токену устройства
-    const payload = {
+    const message = {
       notification: {
-        title: 'Новое сообщение в чате',
-        body: `${senderName} отправил(а) сообщение`,
+        title: title,
+        body: body,
       },
+      data: {
+        sender: sender,
+      },
+      token: token,
     };
 
-    for (const token of deviceTokens) {
-      await admin.messaging().sendToDevice(token, payload);
-    }
-  });
-
-async function getDeviceTokensForEvent(eventId) {
-  // Ваш код для получения токенов устройств, связанных с событием
-  // Например, запрос к базе данных для получения пользователей и их токенов
-  // Помните о безопасности, храните токены устройств в безопасном месте
-  // и используйте их ответственно.
-}
+    await admin.messaging().send(message);
+    return {success: true};
+  } catch (error) {
+    console.error("Ошибка при вызове sendNotification:", error);
+    throw new functions.https.HttpsError("internal", "Ошибка при отпр", error);
+  }
+});
