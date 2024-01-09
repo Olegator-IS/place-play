@@ -5,9 +5,11 @@ import 'package:placeandplay/WelcomeScreens/LoginPage.dart';
 import 'package:placeandplay/RegistrationScreens/RegistrationPage.dart';
 import 'EmptyScreen.dart';
 import 'PresenceService.dart';
+import 'Services/FirebaseMessagingService.dart';
 import 'WelcomeScreens/HelloLayout.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,9 +22,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      // Обработка входящих сообщений
-    });
+
 
     return MaterialApp(
       title: 'Place and Play',
@@ -78,7 +78,6 @@ class _AppStateTrackerState extends State<_AppStateTracker> with WidgetsBindingO
       case AppLifecycleState.detached:
         setOnlineStatus(false);
         print('FALL ASLEEP');
-
         break;
     }
   }
@@ -94,7 +93,7 @@ class _AppStateTrackerState extends State<_AppStateTracker> with WidgetsBindingO
     // Обновление значка приложения, используя flutter_app_badger
     PresenceService presenceService = PresenceService();
     String userId = getUserId();
-    print(userId);
+
 
     if(_isOnline){
       await PresenceService.setUserOnline(userId);

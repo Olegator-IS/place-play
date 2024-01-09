@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -9,12 +10,13 @@ class EventCreationForm extends StatefulWidget {
   final String activityType;
   final String userId;
   final String type;
+  final String typeEn;
   final String address;
   final String name;
   final String phoneNumber;
   final String firstName;
 
-  const EventCreationForm({super.key, required this.organizer, required this.activityType,required this.userId,required this.type,required this.address,required this.name,required this.phoneNumber,required this.firstName});
+  const EventCreationForm({super.key, required this.organizer, required this.activityType,required this.userId,required this.type,required this.typeEn,required this.address,required this.name,required this.phoneNumber,required this.firstName});
 
   @override
   _EventCreationFormState createState() => _EventCreationFormState();
@@ -27,6 +29,7 @@ class EventData {
   final String startTimeEvent;
   final String organizer;
   final String type;
+  final String typeEn;
   final String address;
   final String uid;
   final List<Map<String, String>> participants;
@@ -39,6 +42,7 @@ class EventData {
   required this.startTimeEvent,
   required this.organizer,
     required this.type,
+    required this.typeEn,
     required this.address,
     required this.uid,
     required this.participants,
@@ -54,6 +58,7 @@ Map<String, dynamic> toJson() {
     'startTimeEvent': startTimeEvent,
     'organizer': organizer,
     'type': type,
+    'type':typeEn,
     'uid': uid,
     'participants':participants,
     'isRegistered':false,
@@ -69,6 +74,7 @@ class EventDataWithOut {
   final String startTimeEvent;
   final String organizer;
   final String type;
+  final String typeEn;
   final String address;
   final String uid;
   final List<Map<String, String>> participants;
@@ -81,6 +87,7 @@ class EventDataWithOut {
     required this.startTimeEvent,
     required this.organizer,
     required this.type,
+    required this.typeEn,
     required this.address,
     required this.uid,
     required this.participants,
@@ -96,6 +103,7 @@ class EventDataWithOut {
       'startTimeEvent': startTimeEvent,
       'organizer': organizer,
       'type': type,
+      'typeEn': typeEn,
       'uid': uid,
       'isRegistered':false,
       'participants':[],
@@ -146,6 +154,29 @@ class _EventCreationFormState extends State<EventCreationForm> {
       );
     }
   }
+
+
+  void subscribeToTopic(String topic) async {
+    await FirebaseMessaging.instance.subscribeToTopic(topic);
+    print('Пользователь подписан на тему: $topic');
+
+    // Создаем уведомление
+    RemoteMessage message = RemoteMessage(
+      data: {
+        'title': 'Новое уведомление',
+        'body': 'Это тестовое уведомление',
+      },
+    );
+
+    // Отправляем уведомление
+    await FirebaseMessaging.instance.sendMessage();
+  }
+
+
+
+
+
+
 
   // Future<void> initializeNotifications() async {
   //   const AndroidInitializationSettings initializationSettingsAndroid =
@@ -436,6 +467,7 @@ class _EventCreationFormState extends State<EventCreationForm> {
               startTimeEvent: _eventTimeBeginController.text,
               organizer: widget.organizer,
               type: widget.type,
+              typeEn: widget.typeEn,
               address: widget.address,
               uid: widget.userId, participants: [{'uid': widget.userId.toString(), 'firstName': widget.firstName.toString()}],
             );
@@ -448,6 +480,7 @@ class _EventCreationFormState extends State<EventCreationForm> {
               startTimeEvent: _eventTimeBeginController.text,
               organizer: widget.organizer,
               type: widget.type,
+                typeEn: widget.typeEn,
               address: widget.address,
               uid: widget.userId,
                 participants: []
@@ -473,7 +506,8 @@ class _EventCreationFormState extends State<EventCreationForm> {
             final eventsJson = events.map((event) => event.toJson()).toList();
             final jsonData = {'events': eventsJson};
             print(jsonData);
-
+            print(widget.typeEn);
+            subscribeToTopic(widget.typeEn.toString());
 
 
             // Очистите форму и закройте диалог
@@ -554,4 +588,5 @@ class _EventCreationFormState extends State<EventCreationForm> {
       ],
     );
   }
+
 }
