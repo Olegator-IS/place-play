@@ -34,6 +34,9 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="default_channel_id" />
+        <meta-data
+        android:name="com.google.firebase.messaging.default_notification_sound"
+        android:value="swipe.mp3" />
         <service
             android:name="com.google.firebase.messaging.FirebaseMessagingService"
             android:exported="false">

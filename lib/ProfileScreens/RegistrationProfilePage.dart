@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,6 +14,7 @@ void main() {
   runApp(const MaterialApp(home: RegistrationProfilePage()));
 }
 
+String? token;
 class RegistrationProfilePage extends StatefulWidget {
   const RegistrationProfilePage({super.key});
 
@@ -25,8 +27,11 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
-  List<String> _selectedGameInterests = [];
-  String? _selectedGameInterest;
+  List<Map<String, String>> _selectedGameInterests = [];
+  List<String> _selectedGameInterests1 = [];
+  List<String> _selectedGameInterestsEn = [];
+
+  Map<String, String>? _selectedGameInterest;
   Map<String, double> _skillLevels = {};
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _genderController = TextEditingController();
@@ -103,6 +108,76 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
     }
     return age;
   }
+  Future<bool> doesUserDocExist(String eventType) async {
+    try {
+      DocumentReference userDocRef = FirebaseFirestore.instance.collection('subscriptions').doc(eventType);
+      DocumentSnapshot userDocSnapshot = await userDocRef.get();
+      return userDocSnapshot.exists;
+    } catch (e) {
+      print('Error checking if user eventType exists: $e');
+      return false;
+    }
+  }
+  Future<List<dynamic>?> getUsersId(String eventType) async {
+    print('ПОЛУЧЕНННННННЫЙ UID EVENT TYPES $eventType');
+    try {
+      // Получение документа пользователя из коллекции subscriptions
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('subscriptions').doc(eventType).get();
+
+      print('snapshot prowel');
+      print('eventType $eventType');
+      // Извлечение массива userId из документа пользователя
+      List<dynamic>? usersId = (userDoc.data() as Map<String, dynamic>?)?['userId'];
+      print('USERS ID -> $usersId');
+
+
+      return usersId;
+    } catch (e) {
+      print('Error getting usersId: $e');
+      return null;
+    }
+  }
+
+  Future<void> updateSubscriptions(List<String> selectedGameInterestsEn, String uid) async {
+    try {
+      final CollectionReference subscriptionCollection =
+      FirebaseFirestore.instance.collection('subscription');
+
+      // Используем Set для уникальных видов спорта
+      Set<String> uniqueSports = Set.from(selectedGameInterestsEn);
+
+      // Проходим по всем уникальным видам спорта
+      for (String sport in uniqueSports) {
+        // Получаем документ с именем вид спорта
+        DocumentReference sportDocument = subscriptionCollection.doc(sport);
+
+        // Получаем текущий список пользователей для данного вида спорта
+        List<String> currentUsers = [];
+
+        bool doesExist = await doesUserDocExist(sport);
+        if (doesExist) {
+          print('eventType exists.');
+          uid = (await getUsersId(sport)) as String;
+          print(uid);
+        } else {
+          DocumentReference userDocRef = FirebaseFirestore.instance.collection('subscriptions').doc(sport);
+          currentUsers.add(uid); // Добавляем uid только один раз
+          // Добавляем информацию о пользователе в документ
+          await userDocRef.set({
+            'usersId': currentUsers,
+          });
+          print('User added to subscriptions successfully.');
+        }
+      }
+    } catch (e) {
+      print('Ошибка при обновлении подписок: $e');
+    }
+  }
+
+
+// Вызывайте эту функцию перед или после обновления FCM-токена в Firestore
+// Передавайте _selectedGameInterestsEn и uid, например:
+// await updateSubscriptions(_selectedGameInterestsEn, uid);
 
   void _registerProfile() async {
 
@@ -118,7 +193,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
         'uid': uid,
         'firstName': _firstNameController.text,
         'lastName': _lastNameController.text,
-        'gamesInterests': _selectedGameInterests.join(', '),
+        'gamesInterests': _selectedGameInterests1.join(', '),
         'skillLevels': _skillLevels,
         'location': _locationController.text,
         'age': _ageController.text,
@@ -126,10 +201,47 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
         'gender':_genderController.text,
       };
 
+print('tttt124124124124124');
+print(_selectedGameInterestsEn);
 
+      FirebaseMessaging messaging = FirebaseMessaging.instance;
+      token = await messaging.getToken();
+      print('FCM Device Token: $token');
 
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'fcmToken': token,
+      });
 
+       updateSubscriptions(_selectedGameInterestsEn, uid);
 
+      // bool doesExist = await doesUserDocExist(typeEn);
+      // if (doesExist) {
+      //   print('eventType exists.');
+      //   usersId = await getUsersId(typeEn);
+      //   print(usersId);
+      // } else {
+      //   DocumentReference userDocRef = FirebaseFirestore.instance.collection('subscriptions').doc(_selectedGameInterestsEn.toString());
+      //   usersId.add(uid);
+      //   // Добавляем информацию о пользователе в документ
+      //   await userDocRef.set({
+      //     'userId': usersId
+      //   });
+      //   print('User added to subscriptions successfully.');
+      // }
+      //
+      //
+      //
+      //
+      // print('Старый');
+      // print(usersId);
+      // if (!usersId!.contains(uid)) {
+      //   usersId?.add(uid);
+      //   print('Обновленный');
+      //   print(usersId);
+      //   await FirebaseFirestore.instance.collection('subscriptions').doc(typeEn).update({
+      //     'userId': usersId,
+      //   });
+      // }
 
         await FirebaseFirestore.instance
             .collection('userProfiles')
@@ -425,7 +537,7 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                     content: SingleChildScrollView(
                       child: Column(
                       children: <Widget>[
-                        FutureBuilder<List<String>>(
+                        FutureBuilder<List<Map<String, String>>>(
                           future: getGamesInterestsFromFirestore(),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -438,19 +550,20 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                               final gamesInterests = snapshot.data!;
                               return Column(
                                 children: <Widget>[
-                                  DropdownButtonFormField<String>(
+                                  DropdownButtonFormField<Map<String, String>>(
                                     value: _selectedGameInterest,
-                                    items: gamesInterests.map((String interest) {
-                                      return DropdownMenuItem<String>(
+                                    items: gamesInterests.map((Map<String, String> interest) {
+                                      return DropdownMenuItem<Map<String, String>>(
                                         value: interest,
-                                        child: Text(interest),
+                                        child: Text(interest['nameRu'] ?? ''),
                                       );
                                     }).toList(),
-                                    onChanged: (String? value) {
-                                      if (value != null &&
-                                          !_selectedGameInterests.contains(value)) {
+                                    onChanged: (Map<String, String>? value) {
+                                      if (value != null && !_selectedGameInterests.contains(value)) {
                                         setState(() {
                                           _selectedGameInterest = value;
+                                          _selectedGameInterests1.add(value['nameRu']!);
+                                          _selectedGameInterestsEn.add(value['nameEn']!);
                                           _selectedGameInterests.add(value);
                                           _selectedGameInterest = null;
                                         });
@@ -464,11 +577,11 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                     onPressed: () {
                                       setState(() {
                                         if (_selectedGameInterest != null &&
-                                            !_selectedGameInterests
-                                                .contains(_selectedGameInterest)) {
+                                            !_selectedGameInterests.contains(_selectedGameInterest!)) {
                                           _selectedGameInterests.add(_selectedGameInterest!);
-                                          _skillLevels[_selectedGameInterest!] = 0.0;
+                                          _skillLevels[_selectedGameInterest!['nameRu'] ?? ''] = 0.0;
                                           _selectedGameInterest = null;
+
                                         }
                                       });
                                     },
@@ -484,14 +597,15 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                                   ),
                                   Wrap(
                                     spacing: 8.0,
-                                    children: _selectedGameInterests.map((interest) {
-                                      if (!interestColors.containsKey(interest)) {
-                                        interestColors[interest] = _generateRandomColor();
+                                    children: _selectedGameInterests.map((Map<String, String> interest) {
+                                      final String nameRu = interest['nameRu'] ?? '';
+                                      if (!interestColors.containsKey(nameRu)) {
+                                        interestColors[nameRu] = _generateRandomColor();
                                       }
-                                      Color color = interestColors[interest] ?? Colors.grey;
+                                      Color color = interestColors[nameRu] ?? Colors.grey;
                                       return Chip(
                                         backgroundColor: color,
-                                        label: Text(interest),
+                                        label: Text(nameRu),
                                         onDeleted: () {
                                           setState(() {
                                             _selectedGameInterests.remove(interest);
@@ -506,6 +620,8 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                             }
                           },
                         ),
+
+
                       ],
                       ),
                     ),
@@ -514,32 +630,34 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
                     title: const Text('Укажите уровень владения выбранных видов спорта'),
                     content: SingleChildScrollView(
                       child: Column(
-                      children: <Widget>[
-                        for (String sportInterest in _selectedGameInterests)
-                          Column(
-                            children: <Widget>[
-                              Text(
-                                  'Уровень навыков для $sportInterest: ${_getSkillLevelDescription(_skillLevels[sportInterest] ?? 0.0)}'),
-                              Slider(
-                                value: _skillLevels[sportInterest] ?? 0.0,
-                                onChanged: (newValue) {
-                                  setState(() {
-                                    _skillLevels[sportInterest] = newValue;
-                                  });
-                                },
-                                min: 0.0,
-                                max: 100.0,
-                                divisions: 100,
-                                label: _skillLevels[sportInterest]
-                                        ?.toStringAsFixed(2) ??
-                                    '0.0',
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
+                        children: <Widget>[
+                          for (Map<String, String> sportInterest in _selectedGameInterests)
+                            Column(
+                              children: <Widget>[
+                                Text(
+                                    'Уровень навыков для ${sportInterest['nameRu']}: ${_getSkillLevelDescription(_skillLevels[sportInterest['nameRu']] ?? 0.0)}'),
+                                Slider(
+                                  value: _skillLevels[sportInterest['nameRu']] ?? 0.0,
+                                  onChanged: (newValue) {
+                                    setState(() {
+                                      _skillLevels[sportInterest['nameRu'] ?? ''] = newValue;
+                                    });
+                                  },
+                                  min: 0.0,
+                                  max: 100.0,
+                                  divisions: 100,
+                                  label: _skillLevels[sportInterest['nameRu']]
+                                      ?.toStringAsFixed(2) ??
+                                      '0.0',
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
                     ),
                   ),
+
+
                   /*Step(
                     title: Row(
                       children: <Widget>[

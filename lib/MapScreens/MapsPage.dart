@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -19,10 +21,11 @@ import 'package:intl/intl.dart';
 import '../Events/EventsList.dart';
 
 
-
+String? token;
 
 class MapsPage extends StatefulWidget {
   final String userId;
+
 
   const MapsPage({super.key, required this.userId});
 
@@ -109,6 +112,7 @@ class MapsPageState extends State<MapsPage> {
   @override
   void initState() {
     super.initState();
+
     _fetchLocationsFromFirestore();
     _fetchUserData();
     _refreshData();
@@ -278,6 +282,8 @@ class MapsPageState extends State<MapsPage> {
 
     return unreadMessageCount;
   }
+
+
 
   Future<void> _fetchLocationsFromFirestore() async {
     final String firstNameUser;
@@ -880,6 +886,51 @@ class MapsPageState extends State<MapsPage> {
                                                                       await joinEvent(markerName, dateEvent, startTimeEvent, currentUserId, firstNameParticipant, organizerUid,event['eventId']);
                                                                     setState(() {
                                                                     });
+                                                                    // sendPrepare(token!);
+                                                                    List<dynamic>? currentEventTypes = [];
+                                                                    List<dynamic>? usersId = [];
+                                                                    print('UID NOTIFICATION SENDER $widget.userId');
+                                                                    String uid = widget.userId;
+
+                                                                    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+                                                                      'fcmToken': token,
+                                                                    });
+
+                                                                    bool doesExist = await doesUserDocExist(typeEn);
+                                                                    if (doesExist) {
+                                                                      print('eventType exists.');
+                                                                      usersId = await getUsersId(typeEn);
+                                                                      print(usersId);
+                                                                    } else {
+                                                                      DocumentReference userDocRef = FirebaseFirestore.instance.collection('subscriptions').doc(typeEn);
+                                                                      usersId.add(uid);
+                                                                      // Добавляем информацию о пользователе в документ
+                                                                      await userDocRef.set({
+                                                                        'userId': usersId
+                                                                      });
+                                                                      print('User added to subscriptions successfully.');
+                                                                    }
+
+
+
+
+                                                                    print('Старый');
+                                                                    print(usersId);
+                                                                    if (!usersId!.contains(uid)) {
+                                                                      usersId?.add(uid);
+                                                                      print('Обновленный');
+                                                                      print(usersId);
+                                                                      await FirebaseFirestore.instance.collection('subscriptions').doc(typeEn).update({
+                                                                        'userId': usersId,
+                                                                      });
+                                                                    }
+
+
+//// Получаю список подписчиков данного спорта
+
+                                                                    String place = name.toString().toUpperCase();
+                                                                    String game = type.toString().toUpperCase();
+                                                                    sendNotificationToSubscribers(organizerUid,'Ура!Пользователь $firstName присоединился!','Игрок готов к игре в $place');
 
                                                                   }
                                                                 } : null,
@@ -949,6 +1000,100 @@ class MapsPageState extends State<MapsPage> {
       });
     });
   }
+
+  Future<bool> doesUserDocExist(String eventType) async {
+    try {
+      DocumentReference userDocRef = FirebaseFirestore.instance.collection('subscriptions').doc(eventType);
+      DocumentSnapshot userDocSnapshot = await userDocRef.get();
+      return userDocSnapshot.exists;
+    } catch (e) {
+      print('Error checking if user eventType exists: $e');
+      return false;
+    }
+  }
+
+  Future<List<dynamic>?> getUsersId(String eventType) async {
+    print('ПОЛУЧЕНННННННЫЙ UID EVENT TYPES $eventType');
+    try {
+      // Получение документа пользователя из коллекции subscriptions
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('subscriptions').doc(eventType).get();
+
+      print('snapshot prowel');
+      print('eventType $eventType');
+      // Извлечение массива userId из документа пользователя
+      List<dynamic>? usersId = (userDoc.data() as Map<String, dynamic>?)?['userId'];
+      print('USERS ID -> $usersId');
+
+
+      return usersId;
+    } catch (e) {
+      print('Error getting usersId: $e');
+      return null;
+    }
+  }
+
+  Future<void> sendNotificationToSubscribers(String organizerUid, String title, String body) async {
+
+      try {
+        // Получаем документ пользователя из коллекции 'users'
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(organizerUid).get();
+
+        // Извлекаем токен пользователя
+        String? userToken = (userDoc.data() as Map<String, dynamic>?)?['fcmToken'];
+
+
+        print('userToken $userToken');
+        // Проверяем, есть ли токен
+        if (userToken != null) {
+          String swipe = "audio/swipe.mp3";
+          // Отправляем уведомление с использованием полученного токена
+
+
+          await sendNotification(userToken, title, body, organizerUid,swipe);
+        } else {
+          print('Токен пользователя не найден для пользователя с UID $organizerUid');
+        }
+      } catch (e) {
+        print('Ошибка при отправке уведомления пользователю с UID $organizerUid: $e');
+      }
+
+  }
+
+  Future<void> sendNotification(String token, String title, String body, String sender,String sound) async {
+    final HttpsCallable sendNotificationCallable =
+    FirebaseFunctions.instance.httpsCallable('sendNotification');
+
+    print(token);
+
+    // Создаем объект payload
+    final payload = {
+      'token': token,
+      'title': title,
+      'body': body,
+      'sender': sender,
+      'sound':sound
+
+    };
+
+    try {
+      final result = await sendNotificationCallable.call(payload);
+      // здесь вы можете обработать результат вызова
+    } catch (e) {
+      print('Error calling sendNotification: $e');
+    }
+  }
+
+  Future<void> subscribeToTopic(String topic) async {
+    await FirebaseMessaging.instance.subscribeToTopic(topic);
+    print('Пользователь подписан на топик: $topic');
+  }
+
+
+
+
+
+
+
 
 
 
@@ -1125,6 +1270,9 @@ class MapsPageState extends State<MapsPage> {
 
   Future<void> _fetchUserData() async {
     final user = FirebaseAuth.instance.currentUser;
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    token = await messaging.getToken();
+    print('FCM Device Token: $token');
 
     if (user != null) {
       final userSnapshot = await FirebaseFirestore.instance.collection('userProfiles').doc(user.uid).get();

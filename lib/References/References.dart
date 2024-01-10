@@ -10,12 +10,25 @@ Future<List<String>> getCommunicationPreferences() async {
   }).toList();
 }
 
-Future<List<String>> getGamesInterestsFromFirestore() async {
+Future<List<Map<String, String>>> getGamesInterestsFromFirestore() async {
   final QuerySnapshot querySnapshot =
   await FirebaseFirestore.instance.collection('listOfSports').get();
   return querySnapshot.docs.map((doc) {
     final data = doc.data() as Map<String, dynamic>;
-    return data['nameRu'] as String? ?? '';
+    return {
+      'nameRu': data['nameRu'] as String? ?? '',
+      'nameEn': data['nameEn'] as String? ?? '',
+    };
+  }).toList();
+}
+
+
+Future<List<String>> getGamesInterestsFromFirestoreSubscription() async {
+  final QuerySnapshot querySnapshot =
+  await FirebaseFirestore.instance.collection('listOfSports').get();
+  return querySnapshot.docs.map((doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return data['nameEn'] as String? ?? '';
   }).toList();
 }
 
