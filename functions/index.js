@@ -4,10 +4,11 @@ admin.initializeApp();
 
 exports.sendNotification = functions.https.onCall(async (data, context) => {
   try {
-    const {token, title, body, sender} = data;
+    const {token, title, body, sender, sound} = data;
     console.log("Token:", token);
     console.log("Title:", title);
     console.log("Sender:", sender);
+    console.log("Sound:", sound); // Добавьте вывод звука в лог
 
     if (!token || !title || !sender) {
       throw new Error("Не все обязательные параметры предоставлены");
@@ -20,6 +21,7 @@ exports.sendNotification = functions.https.onCall(async (data, context) => {
       },
       data: {
         sender: sender,
+        sound: sound, // Переместите поле 'sound' в объект 'data'
       },
       token: token,
     };

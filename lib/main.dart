@@ -10,7 +10,11 @@ import 'Services/FirebaseMessagingService.dart';
 import 'WelcomeScreens/HelloLayout.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
+import 'package:audioplayers/audioplayers.dart';
 
+
+final audioCache = AudioCache();
+const audioFilePath = 'audio/swipe.mp3';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,23 +49,38 @@ void main() async {
 FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 FlutterLocalNotificationsPlugin();
 
+
+
 void displayNotification(RemoteMessage message) async {
+  String sound = message.data['sound'];
+  print('Sound $sound');
+  playNotificationSound(sound); // Кастомный звук из параметра 'audioFilePath'
+  //
   var android = AndroidNotificationDetails(
     'channel_id',
     'channel_name',
     importance: Importance.max,
     priority: Priority.high,
+    playSound: false,
   );
-  var platform = NotificationDetails(android: android);
+  //
+  //
 
   await flutterLocalNotificationsPlugin.show(
     0,
     message.notification?.title,
     message.notification?.body,
-    platform,
-    payload: 'Custom_Sound', // Настройте дополнительные параметры по вашему выбору
+    NotificationDetails(android: android),
+    payload: 'Custom_Sound',
   );
+
+
 }
+
+Future<void> playNotificationSound(String sound) async {
+  await audioCache.play(sound);
+}
+
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);

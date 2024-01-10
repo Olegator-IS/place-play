@@ -177,7 +177,7 @@ class _EventCreationFormState extends State<EventCreationForm> {
       print('snapshot prowel');
       print('eventType $eventType');
       // Извлечение массива userId из документа пользователя
-      List<dynamic>? usersId = (userDoc.data() as Map<String, dynamic>?)?['userId'];
+      List<dynamic>? usersId = (userDoc.data() as Map<String, dynamic>?)?['usersId'];
       print('USERS ID -> $usersId');
 
 
@@ -201,8 +201,17 @@ class _EventCreationFormState extends State<EventCreationForm> {
         print('userToken $userToken');
         // Проверяем, есть ли токен
         if (userToken != null) {
+          String swipe = "audio/swipe.mp3";
           // Отправляем уведомление с использованием полученного токена
-          await sendNotification(userToken, title, body, userId);
+          String typeEn = widget.typeEn;
+          print('TYPE EN $typeEn');
+          if(typeEn.toUpperCase().contains('BILLIARDS')){
+            swipe = "audio/billiards.mp3";
+          }else if(typeEn.toUpperCase().contains('TENNIS')){
+            swipe = "audio/tennis.mp3";
+          }
+
+          await sendNotification(userToken, title, body, userId,swipe);
         } else {
           print('Токен пользователя не найден для пользователя с UID $userId');
         }
@@ -226,12 +235,11 @@ class _EventCreationFormState extends State<EventCreationForm> {
   Future<void> sendPrepare(String token) async {
     List<dynamic>? currentEventTypes = [];
     List<dynamic>? usersId = [];
-    print('UID NOTIFICATION SENDER $widget.userId');
     String uid = widget.userId;
     String typeEn = widget.typeEn;
 
     await FirebaseFirestore.instance.collection('users').doc(uid).update({
-      'fcmToken': '2',
+      'fcmToken': token,
     });
 
     bool doesExist = await doesUserDocExist(typeEn);
@@ -239,14 +247,6 @@ class _EventCreationFormState extends State<EventCreationForm> {
       print('eventType exists.');
       usersId = await getUsersId(typeEn);
       print(usersId);
-    } else {
-      DocumentReference userDocRef = FirebaseFirestore.instance.collection('subscriptions').doc(typeEn);
-      usersId.add(uid);
-      // Добавляем информацию о пользователе в документ
-      await userDocRef.set({
-        'userId': usersId
-      });
-      print('User added to subscriptions successfully.');
     }
 
 
@@ -259,7 +259,7 @@ class _EventCreationFormState extends State<EventCreationForm> {
       print('Обновленный');
       print(usersId);
       await FirebaseFirestore.instance.collection('subscriptions').doc(typeEn).update({
-        'userId': usersId,
+        'usersId': usersId,
       });
     }
 
@@ -276,7 +276,7 @@ String place = widget.name.toUpperCase();
   }
 
 
-  Future<void> sendNotification(String token, String title, String body, String sender) async {
+  Future<void> sendNotification(String token, String title, String body, String sender,String sound) async {
     final HttpsCallable sendNotificationCallable =
     FirebaseFunctions.instance.httpsCallable('sendNotification');
 
@@ -288,6 +288,7 @@ String place = widget.name.toUpperCase();
       'title': title,
       'body': body,
       'sender': sender,
+      'sound':sound
 
     };
 
