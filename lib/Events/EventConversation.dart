@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,11 +14,12 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../PresenceService.dart';
 
 
-
+String? token;
 class EventConversation extends StatefulWidget {
   final String eventId;
+  final String eventName; // Black Pool
 
-  EventConversation({required this.eventId});
+  EventConversation({required this.eventId,required this.eventName});
 
   @override
   _EventConversationState createState() => _EventConversationState();
@@ -294,7 +296,7 @@ print(messageIdForEdit);
       await newMessageRef.update({'docId': docId});
 
       initializeNotifications();
-      sendTestNotification();
+      sendPrepare(senderName,newMessage,docId,user?.uid,widget.eventName.toString());
 
       messageController.clear();
     }
@@ -308,41 +310,135 @@ print(messageIdForEdit);
 
 
   Future<void> initializeNotifications() async {
+
     const AndroidInitializationSettings initializationSettingsAndroid =
     AndroidInitializationSettings('@mipmap/ic_launcher');
     final InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
     );
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
   }
 
-  Future<void> sendTestNotification() async {
-    await _firebaseMessaging.subscribeToTopic('test'); // Подписываемся на тему
 
-    // Создаем уведомление
-    final AndroidNotificationDetails androidPlatformChannelSpecifics =
-    AndroidNotificationDetails(
-      'your channel id', // id канала
-      'your channel name', // имя канала
-      importance: Importance.max,
-      priority: Priority.high,
-    );
 
-    final NotificationDetails platformChannelSpecifics =
-    NotificationDetails(android: androidPlatformChannelSpecifics);
+  Future<void> sendPrepare( String senderName, String newMessage, String docId, String? uid,String eventName) async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    token = await messaging.getToken();
+    print('FCM Device Token: $token');
+    print('TOKEN $token');
+    print('SenderName $senderName');
+    print('Message $newMessage');
+    print('docId $docId');
+    print('eventName $eventName');
+    List<dynamic>? currentEventTypes = [];
+    List<dynamic>? usersId = [];
 
-    await flutterLocalNotificationsPlugin.show(
-      0,
-      'Заголовок уведомления',
-      'Текст уведомления',
-      platformChannelSpecifics,
-      payload: 'item x',
-    );
+
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'fcmToken': token,
+    });
+
+
+
+
+
+
+
+    List<String> participantsUIDList = await getParticipantsUID(eventName, docId);
+    print('Список UID участников: $participantsUIDList');
+
+//// Получаю список подписчиков данного спорта
+
+
+    sendNotificationToSubscribers(participantsUIDList!,'Новое сообщение $docId','$senderName отправил сообщение в чат\n$newMessage');
+
+
+
   }
 
-  Future<void> _handleMessage(RemoteMessage message) async {
-    print('Handling a background message: ${message.messageId}');
-    // Обработка данных из уведомления, пришедшего в фоновом режиме
+  Future<List<String>> getParticipantsUID(String eventName, String docId) async {
+    List<String> participantsUIDList = [];
+
+    try {
+      // Получаем документ events
+      print('Зашли в getParticipantsUID');
+      print('Выбранный eventName $eventName');
+      var eventsDoc = await FirebaseFirestore.instance.collection('events').doc(eventName).get();
+      print('eventDoc $eventsDoc');
+      if (eventsDoc.exists) {
+        // Получаем массив событий внутри документа events
+        var eventsArray = eventsDoc.data()?['events']; // Исправлено здесь, замените 'events' на 'Events'
+
+        print('eventsArray $eventsArray');
+        // Находим нужное событие по docId (или eventId, как вы его назвали)
+        var targetEvent = eventsArray.firstWhere((event) => event['eventId'] == docId, orElse: () => null);
+
+        if (targetEvent != null) {
+          // Получаем массив участников события
+          var participantsArray = targetEvent['participants'];
+
+          // Извлекаем UID каждого участника
+          participantsUIDList = List<String>.from(participantsArray.map((participant) => participant['uid'])); // Исправлено здесь, замените 'UID' на 'uid'
+        }
+      }
+    } catch (e) {
+      print('Ошибка при получении списка UID участников: $e');
+    }
+
+    return participantsUIDList;
+  }
+
+
+  Future<void> sendNotificationToSubscribers(List<dynamic> userIds, String title, String body) async {
+    for (String userId in userIds) {
+      try {
+        // Получаем документ пользователя из коллекции 'users'
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+
+        // Извлекаем токен пользователя
+        String? userToken = (userDoc.data() as Map<String, dynamic>?)?['fcmToken'];
+
+
+        print('userToken $userToken');
+        // Проверяем, есть ли токен
+        if (userToken != null) {
+          String swipe = "audio/swipe.mp3";
+          // Отправляем уведомление с использованием полученного токена
+
+          await sendNotification(userToken, title, body, userId,swipe);
+        } else {
+          print('Токен пользователя не найден для пользователя с UID $userId');
+        }
+      } catch (e) {
+        print('Ошибка при отправке уведомления пользователю с UID $userId: $e');
+      }
+    }
+  }
+
+
+  Future<void> sendNotification(String token, String title, String body, String sender,String sound) async {
+    final HttpsCallable sendNotificationCallable =
+    FirebaseFunctions.instance.httpsCallable('sendNotification');
+
+    print(token);
+
+    // Создаем объект payload
+    final payload = {
+      'token': token,
+      'title': title,
+      'body': body,
+      'sender': sender,
+      'sound':sound
+
+    };
+
+    try {
+      final result = await sendNotificationCallable.call(payload);
+      // здесь вы можете обработать результат вызова
+    } catch (e) {
+      print('Error calling sendNotification: $e');
+    }
   }
 
 
