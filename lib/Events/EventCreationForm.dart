@@ -252,23 +252,14 @@ class _EventCreationFormState extends State<EventCreationForm> {
 
 
 
-    print('Старый');
-    print(usersId);
-    if (!usersId!.contains(uid)) {
-      usersId?.add(uid);
-      print('Обновленный');
-      print(usersId);
-      await FirebaseFirestore.instance.collection('subscriptions').doc(typeEn).update({
-        'usersId': usersId,
-      });
-    }
+
 
 
 //// Получаю список подписчиков данного спорта
 
 String place = widget.name.toUpperCase();
     String game = widget.type.toUpperCase();
-    sendNotificationToSubscribers(usersId,'Появился новый ивент $game','Кто-то ищет компанию в $place\n'
+    sendNotificationToSubscribers(usersId!,'Появился новый ивент $game','Кто-то ищет компанию в $place\n'
         'Чтобы сыграть в $game');
 
 

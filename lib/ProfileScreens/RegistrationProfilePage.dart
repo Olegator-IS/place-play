@@ -118,30 +118,34 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
       return false;
     }
   }
-  Future<List<dynamic>?> getUsersId(String eventType) async {
+  Future<List<dynamic>> getUsersId(String eventType) async {
     print('ПОЛУЧЕНННННННЫЙ UID EVENT TYPES $eventType');
     try {
       // Получение документа пользователя из коллекции subscriptions
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('subscriptions').doc(eventType).get();
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('subscriptions')
+          .doc(eventType)
+          .get();
 
       print('snapshot prowel');
       print('eventType $eventType');
       // Извлечение массива userId из документа пользователя
-      List<dynamic>? usersId = (userDoc.data() as Map<String, dynamic>?)?['userId'];
+      List<dynamic> usersId =
+          (userDoc.data() as Map<String, dynamic>?)?['usersId'] ?? [];
       print('USERS ID -> $usersId');
-
 
       return usersId;
     } catch (e) {
       print('Error getting usersId: $e');
-      return null;
+      return [];
     }
   }
+
 
   Future<void> updateSubscriptions(List<String> selectedGameInterestsEn, String uid) async {
     try {
       final CollectionReference subscriptionCollection =
-      FirebaseFirestore.instance.collection('subscription');
+      FirebaseFirestore.instance.collection('subscriptions');
 
       // Используем Set для уникальных видов спорта
       Set<String> uniqueSports = Set.from(selectedGameInterestsEn);
@@ -154,25 +158,37 @@ class _RegistrationProfilePageState extends State<RegistrationProfilePage> {
         // Получаем текущий список пользователей для данного вида спорта
         List<String> currentUsers = [];
 
+        // Проверяем существование подписки
         bool doesExist = await doesUserDocExist(sport);
+
         if (doesExist) {
-          print('eventType exists.');
-          uid = (await getUsersId(sport)) as String;
-          print(uid);
+          print('$sport exists.');
+
+          // Получаем текущий список пользователей
+          currentUsers = (await getUsersId(sport))?.cast<String>() ?? [];
+
+          print('currentUsers $currentUsers');
+          // Если пользователь уже подписан, пропускаем
+          if (!currentUsers.contains(uid)) {
+            currentUsers.add(uid);
+            // Обновляем список пользователей в документе
+            await sportDocument.set({'usersId': currentUsers});
+            print('User added to subscriptions successfully for $sport');
+          } else {
+            print('User is already subscribed to $sport');
+          }
         } else {
-          DocumentReference userDocRef = FirebaseFirestore.instance.collection('subscriptions').doc(sport);
-          currentUsers.add(uid); // Добавляем uid только один раз
-          // Добавляем информацию о пользователе в документ
-          await userDocRef.set({
-            'usersId': currentUsers,
-          });
-          print('User added to subscriptions successfully.');
+          // Если подписки не существует, создаем новый документ
+          currentUsers.add(uid);
+          await sportDocument.set({'usersId': currentUsers});
+          print('Subscription document created successfully for $sport');
         }
       }
     } catch (e) {
       print('Ошибка при обновлении подписок: $e');
     }
   }
+
 
 
 // Вызывайте эту функцию перед или после обновления FCM-токена в Firestore
@@ -292,40 +308,43 @@ print(_selectedGameInterestsEn);
       appBar: AppBar(
         title: const Text('Создание профиля'),
       ),
-      body: ListView (
-            children: <Widget>[
-              Stepper(
-                currentStep: _currentStep,
-                onStepTapped: (step) {
-                  setState(() {
-                    _currentStep = step;
-                  });
-                },
-                onStepContinue: () {
-                  setState(() {
-                    if (_currentStep < 20) {
-                      _currentStep += 1;
-                    } else {
-                      _currentStep = 0;
-                    }
-                  });
-                },
-                onStepCancel: () {
-                  setState(() {
-                    if (_currentStep > 0) {
-                      _currentStep -= 1;
-                    } else if (_currentStep == 0) {
-                      _currentStep = 0;
-                    } else {
-                      _currentStep = 20;
-                    }
-                  });
-                },
+    body: SingleChildScrollView (
+        child: Padding(
+        padding: const EdgeInsets.all(16.0),
+    child: Column(
+    children: <Widget>[
+    Stepper(
+            currentStep: _currentStep,
+            onStepTapped: (step) {
+              setState(() {
+                _currentStep = step;
+              });
+            },
+            onStepContinue: () {
+              setState(() {
+                if (_currentStep < 20) {
+                  _currentStep += 1;
+                } else {
+                  _currentStep = 0;
+                }
+              });
+            },
+            onStepCancel: () {
+              setState(() {
+                if (_currentStep > 0) {
+                  _currentStep -= 1;
+                } else if (_currentStep == 0) {
+                  _currentStep = 0;
+                } else {
+                  _currentStep = 20;
+                }
+              });
+            },
                 steps: <Step>[
-                  Step(
-                    title: const Text('Имя и Фамилия'),
-                    content: SingleChildScrollView(
-                      child: Column(
+                Step(
+                title: const Text('Имя и Фамилия'),
+                content: SingleChildScrollView(
+                child: Column(
                       children: <Widget>[
                         TextFormField(
                           controller: _firstNameController,
@@ -347,17 +366,17 @@ print(_selectedGameInterestsEn);
                               return 'Пожалуйста, укажите вашу фамилия';
                             }
                             return null;
-                          },
-                        ),
-                      ],
-                      ),
-                    ),
-                  ),
-                  Step(
-                    title: const Text('Укажите Ваш пол', style: TextStyle(fontSize: 18)),
-                    content: SingleChildScrollView(
-                      child: Column(
-                      children: <Widget>[
+    },
+    ),
+    ],
+    ),
+    ),
+    ),
+    Step(
+    title: const Text('Укажите Ваш пол', style: TextStyle(fontSize: 18)),
+    content: SingleChildScrollView(
+    child: Column(
+    children: <Widget>[
                         ListTile(
                           leading: Radio<String>(
                             value: 'Мужской',
@@ -397,13 +416,13 @@ print(_selectedGameInterestsEn);
                           onTap: () {
                             setState(() {
                               _genderController.text = 'Женский';
-                            });
-                          },
-                        ),
-                      ],
-                      ),
-                    ),
-                  ),
+    });
+    },
+    ),
+    ],
+    ),
+    ),
+    ),
                   Step(
                     title: Row(
                       children: <Widget>[
@@ -529,100 +548,123 @@ print(_selectedGameInterestsEn);
                             color: Colors.green,
                           ),
                           onPressed: () {
-                            // ...
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: const Text('Информация о выборе видов спорта'),
+                                  content: const Text('Здесь вы можете выбрать интересующие вас виды спорта.\n\nВыбрав один или несколько интересующих Вас видов спорта,\n'
+                                      'вы автоматически будете получать уведомления,если кто-то из пользователей создаст ивент с интересующим Вас видом спорта.\n\n'
+                                      'Так же не забудьте в следующем пункте указать навыки владения.'),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: const Text('Хорошо'),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
                           },
                         ),
                       ],
                     ),
                     content: SingleChildScrollView(
                       child: Column(
-                      children: <Widget>[
-                        FutureBuilder<List<Map<String, String>>>(
-                          future: getGamesInterestsFromFirestore(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return const CircularProgressIndicator();
-                            } else if (snapshot.hasError) {
-                              return Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                              return Text('Нет данных об интересах');
-                            } else {
-                              final gamesInterests = snapshot.data!;
-                              return Column(
-                                children: <Widget>[
-                                  DropdownButtonFormField<Map<String, String>>(
-                                    value: _selectedGameInterest,
-                                    items: gamesInterests.map((Map<String, String> interest) {
-                                      return DropdownMenuItem<Map<String, String>>(
-                                        value: interest,
-                                        child: Text(interest['nameRu'] ?? ''),
-                                      );
-                                    }).toList(),
-                                    onChanged: (Map<String, String>? value) {
-                                      if (value != null && !_selectedGameInterests.contains(value)) {
-                                        setState(() {
-                                          _selectedGameInterest = value;
-                                          _selectedGameInterests1.add(value['nameRu']!);
-                                          _selectedGameInterestsEn.add(value['nameEn']!);
-                                          _selectedGameInterests.add(value);
-                                          _selectedGameInterest = null;
-                                        });
-                                      }
-                                    },
-                                    decoration: InputDecoration(
-                                      labelText: 'Вид спорта',
-                                    ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        if (_selectedGameInterest != null &&
-                                            !_selectedGameInterests.contains(_selectedGameInterest!)) {
-                                          _selectedGameInterests.add(_selectedGameInterest!);
-                                          _skillLevels[_selectedGameInterest!['nameRu'] ?? ''] = 0.0;
-                                          _selectedGameInterest = null;
-
-                                        }
-                                      });
-                                    },
-                                    child: Text(_selectedGameInterests.isEmpty
-                                        ? 'Добавить'
-                                        : 'Добавить еще один вид спорта'),
-                                  ),
-                                  Text(
-                                    'Выбранные виды спорта:',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Wrap(
-                                    spacing: 8.0,
-                                    children: _selectedGameInterests.map((Map<String, String> interest) {
-                                      final String nameRu = interest['nameRu'] ?? '';
-                                      if (!interestColors.containsKey(nameRu)) {
-                                        interestColors[nameRu] = _generateRandomColor();
-                                      }
-                                      Color color = interestColors[nameRu] ?? Colors.grey;
-                                      return Chip(
-                                        backgroundColor: color,
-                                        label: Text(nameRu),
-                                        onDeleted: () {
+                        children: <Widget>[
+                          FutureBuilder<List<Map<String, String>>>(
+                            future: getGamesInterestsFromFirestore(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const CircularProgressIndicator();
+                              } else if (snapshot.hasError) {
+                                return Text('Ошибка загрузки');
+                              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                                return Text('Нет данных об интересах');
+                              } else {
+                                final gamesInterests = snapshot.data!;
+                                return Column(
+                                  children: <Widget>[
+                                    DropdownButtonFormField<Map<String, String>>(
+                                      value: _selectedGameInterest,
+                                      items: gamesInterests.map((Map<String, String> interest) {
+                                        return DropdownMenuItem<Map<String, String>>(
+                                          value: interest,
+                                          child: Text(interest['nameRu'] ?? ''),
+                                        );
+                                      }).toList(),
+                                      onChanged: (Map<String, String>? value) {
+                                        if (value != null &&
+                                            !_selectedGameInterests.contains(value)) {
                                           setState(() {
-                                            _selectedGameInterests.remove(interest);
+                                            _selectedGameInterest = value;
+                                            _selectedGameInterests1.add(value['nameRu']!);
+                                            _selectedGameInterestsEn.add(value['nameEn']!);
+                                            _selectedGameInterests.add(value);
+                                            _selectedGameInterest = null;
                                           });
+                                        }
+                                      },
+                                      decoration: InputDecoration(
+                                        labelText: 'Вид спорта',
+                                      ),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          if (_selectedGameInterest != null &&
+                                              !_selectedGameInterests.contains(
+                                                  _selectedGameInterest!)) {
+                                            _selectedGameInterests.add(
+                                                _selectedGameInterest!);
+                                            _skillLevels[_selectedGameInterest!['nameRu'] ?? ''] = 0.0;
+                                            _selectedGameInterest = null;
+                                          }
+                                        });
+                                      },
+                                      child: Text(_selectedGameInterests.isEmpty
+                                          ? 'Добавить'
+                                          : 'Добавить еще один вид спорта'),
+                                    ),
+                                    Text(
+                                      'Выбранные виды спорта:',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Wrap(
+                                      spacing: 8.0,
+                                      children: _selectedGameInterests.map(
+                                            (Map<String, String> interest) {
+                                          final String nameRu =
+                                              interest['nameRu'] ?? '';
+                                          if (!interestColors.containsKey(nameRu)) {
+                                            interestColors[nameRu] =
+                                                _generateRandomColor();
+                                          }
+                                          Color color =
+                                              interestColors[nameRu] ?? Colors.grey;
+                                          return Chip(
+                                            backgroundColor: color,
+                                            label: Text(nameRu),
+                                            onDeleted: () {
+                                              setState(() {
+                                                _selectedGameInterests.remove(interest);
+                                              });
+                                            },
+                                          );
                                         },
-                                      );
-                                    }).toList(),
-                                  ),
-                                  SizedBox(height: 30.0),
-                                ],
-                              );
-                            }
-                          },
-                        ),
-
-
-                      ],
+                                      ).toList(),
+                                    ),
+                                    SizedBox(height: 30.0),
+                                  ],
+                                );
+                              }
+                            },
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -640,7 +682,8 @@ print(_selectedGameInterestsEn);
                                   value: _skillLevels[sportInterest['nameRu']] ?? 0.0,
                                   onChanged: (newValue) {
                                     setState(() {
-                                      _skillLevels[sportInterest['nameRu'] ?? ''] = newValue;
+                                      _skillLevels[sportInterest['nameRu'] ?? ''] =
+                                          newValue;
                                     });
                                   },
                                   min: 0.0,
@@ -657,83 +700,6 @@ print(_selectedGameInterestsEn);
                     ),
                   ),
 
-
-                  /*Step(
-                    title: Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text('Предпочтительный стиль общения'),
-                        ),
-                        SizedBox(width: 10),
-                        IconButton(
-                          icon: Icon(
-                            Icons.info_outline,
-                            color: Colors.blue,
-                          ),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  content: Text('Будьте честны,укажите ваш тип общения.Это поможет другим людям понять Вас'),
-                                  actions: <Widget>[
-                                    TextButton(
-                                      child: Text('Хорошо'),
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                      },
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    content: Column(
-                      children: <Widget>[
-                        FutureBuilder<List<String>>(
-                          future: getCommunicationPreferences(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return CircularProgressIndicator();
-                            } else if (snapshot.hasError) {
-                              return Text('Ошибка загрузки');
-                            } else if (!snapshot.hasData ||
-                                snapshot.data!.isEmpty) {
-                              return Text('Нет данных об стилях общения');
-                            } else {
-                              final communicationPreferences = snapshot.data!;
-                              return Column(
-                                children: <Widget>[
-                                  Column(
-                                    children: communicationPreferences
-                                        .map((String preference) {
-                                      return RadioListTile<String>(
-                                        title: Text(preference),
-                                        value: preference,
-                                        groupValue:
-                                            _selectedCommunicationPreferences,
-                                        onChanged: (String? value) {
-                                          setState(() {
-                                            _selectedCommunicationPreferences =
-                                                value;
-                                          });
-                                        },
-                                      );
-                                    }).toList(),
-                                  ),
-                                ],
-                              );
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                   */
                   Step(
                     title: const Text('Завершение'),
                     content: SingleChildScrollView(
@@ -777,13 +743,14 @@ print(_selectedGameInterestsEn);
                           child: const Text('Завершить регистрацию'),
                         ),
                       ],
+                      ),
                     ),
                   ),
-                  ),
                 ],
-              ),
-            ],
-          ),
-        );
+    ),
+    ],
+    ),
+    ),
+    ),);
   }
 }
