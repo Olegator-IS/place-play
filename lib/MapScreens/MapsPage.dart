@@ -830,6 +830,7 @@ class MapsPageState extends State<MapsPage> {
                                                                           context: context,
                                                                           builder: (context) => EventConversation(
                                                                             eventId: event['eventId'], // Передайте UID организатора
+                                                                            eventName: event['eventName'],
                                                                           ),
                                                                         );
                                                                       }

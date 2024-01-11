@@ -348,7 +348,7 @@ class _EventsListState extends State<EventsList> {
                                     print(event['eventId']);
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
-                                        builder: (context) => EventConversation(eventId: event['eventId']),
+                                        builder: (context) => EventConversation(eventId: event['eventId'],eventName: event['eventName']),
                                       ),
                                     );
                                   },
@@ -374,7 +374,7 @@ class _EventsListState extends State<EventsList> {
                                           print('Открыть обсуждение22');
                                           Navigator.of(context).push(
                                             MaterialPageRoute(
-                                              builder: (context) => EventConversation(eventId: event['eventId']),
+                                              builder: (context) => EventConversation(eventId: event['eventId'],eventName: event['eventName']),
                                             ),
                                           );
                                         },
