@@ -329,16 +329,16 @@ class MapsPageState extends State<MapsPage> {
         if (type == 'Бильярд') {
           markerColor =
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
-        } else if (type == 'Пинг-Понг') {
+        } else if (type == 'Настольный теннис') {
           markerColor =
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
         } else if (type == 'Теннис'){
           markerColor =
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
-        }else if (type == 'Пэйнтболл'){
+        }else if (type == 'Пейнтбол'){
           markerColor =
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueMagenta);
-        }else if (type == 'Страйкболл'){
+        }else if (type == 'Страйкбол'){
           markerColor =
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
         }
@@ -895,38 +895,6 @@ class MapsPageState extends State<MapsPage> {
                                                                     await FirebaseFirestore.instance.collection('users').doc(uid).update({
                                                                       'fcmToken': token,
                                                                     });
-
-                                                                    bool doesExist = await doesUserDocExist(typeEn);
-                                                                    if (doesExist) {
-                                                                      print('eventType exists.');
-                                                                      usersId = await getUsersId(typeEn);
-                                                                      print(usersId);
-                                                                    } else {
-                                                                      DocumentReference userDocRef = FirebaseFirestore.instance.collection('subscriptions').doc(typeEn);
-                                                                      usersId.add(uid);
-                                                                      // Добавляем информацию о пользователе в документ
-                                                                      await userDocRef.set({
-                                                                        'userId': usersId
-                                                                      });
-                                                                      print('User added to subscriptions successfully.');
-                                                                    }
-
-
-
-
-                                                                    print('Старый');
-                                                                    print(usersId);
-                                                                    if (!usersId!.contains(uid)) {
-                                                                      usersId?.add(uid);
-                                                                      print('Обновленный');
-                                                                      print(usersId);
-                                                                      await FirebaseFirestore.instance.collection('subscriptions').doc(typeEn).update({
-                                                                        'userId': usersId,
-                                                                      });
-                                                                    }
-
-
-//// Получаю список подписчиков данного спорта
 
                                                                     String place = name.toString().toUpperCase();
                                                                     String game = type.toString().toUpperCase();
