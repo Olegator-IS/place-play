@@ -188,9 +188,10 @@ class _EventCreationFormState extends State<EventCreationForm> {
     }
   }
 
-  Future<void> sendNotificationToSubscribers(List<dynamic> userIds, String title, String body) async {
+  Future<void> sendNotificationToSubscribers(List<dynamic> userIds, String title, String body,String uid) async {
     for (String userId in userIds) {
       try {
+        print('BEGIN');
         // Получаем документ пользователя из коллекции 'users'
         DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
 
@@ -211,7 +212,8 @@ class _EventCreationFormState extends State<EventCreationForm> {
             swipe = "audio/tennis.mp3";
           }
 
-          await sendNotification(userToken, title, body, userId,swipe);
+            await sendNotification(userToken, title, body, userId, swipe);
+
         } else {
           print('Токен пользователя не найден для пользователя с UID $userId');
         }
@@ -260,7 +262,7 @@ class _EventCreationFormState extends State<EventCreationForm> {
 String place = widget.name.toUpperCase();
     String game = widget.type.toUpperCase();
     sendNotificationToSubscribers(usersId!,'Появился новый ивент $game','Кто-то ищет компанию в $place\n'
-        'Чтобы сыграть в $game');
+        'Чтобы сыграть в $game',uid);
 
 
 

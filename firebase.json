@@ -5,7 +5,12 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
-    ]
+    ],
+    "appAssociation": "AUTO",
+	"rewrites": [ 
+	{ "source": "/dyn/**", 
+	  "dynamicLinks": true } 
+	  ]
   },
   "functions": [
     {

@@ -20,17 +20,29 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
+  print('Тут по любому пришло что-нибудь');
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    print("Received message: ${message.notification?.title}");
+    print('A new onMessageOpenedApp event was published!');
 
+    print("Received message: ${message.notification?.title}");
+    // if(message.notification?.tit)
     // Отобразите уведомление
     displayNotification(message);
+    String? messageBody = message.notification?.body.toString();
+    String? messageTitle = message.notification?.title.toString();
+    print('message title $messageTitle');
+    print('message body $messageBody');
   });
 
-  FirebaseMessaging.onBackgroundMessage((message) {
+  FirebaseMessaging.onBackgroundMessage((message) async {
     print("Handling background message: ${message.notification?.title}");
-    // Добавьте здесь свой код для обработки уведомлений в фоновом режиме.
-    return Future<void>.value();
+    String? messageBody = message.notification?.body.toString();
+    String? messageTitle = message.notification?.title.toString();
+    print('Сообщение в фоне message title $messageTitle');
+    print('Сообщение в фоне message body $messageBody');
+
+    // Вызов функции для обработки уведомления в фоновом режиме
+    // await showNotificationOrPerformActionInBackground(message);
   });
 
 
@@ -41,6 +53,7 @@ void main() async {
   final InitializationSettings initializationSettings = InitializationSettings(
     android: androidInitializationSettings,
   );
+  print('Может быть тут?');
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
   runApp(MyApp());
@@ -57,8 +70,8 @@ void displayNotification(RemoteMessage message) async {
   playNotificationSound(sound); // Кастомный звук из параметра 'audioFilePath'
   //
   var android = AndroidNotificationDetails(
-    'channel_id',
-    'channel_name',
+    'default_channel_id',
+    'Default Chanel',
     importance: Importance.max,
     priority: Priority.high,
     playSound: false,
