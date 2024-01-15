@@ -899,7 +899,7 @@ class MapsPageState extends State<MapsPage> {
 
                                                                     String place = name.toString().toUpperCase();
                                                                     String game = type.toString().toUpperCase();
-                                                                    sendNotificationToSubscribers(organizerUid,'Ура!Пользователь $firstName присоединился!','Игрок готов к игре в $place');
+                                                                    sendNotificationToSubscribers(organizerUid,'Ура! Пользователь $firstName присоединился!','Игрок готов к игре в $place');
 
                                                                   }
                                                                 } : null,

@@ -391,6 +391,7 @@ print(messageIdForEdit);
 
 
   Future<void> sendNotificationToSubscribers(List<dynamic> userIds, String title, String body) async {
+    String? senderUid = user?.uid;
     for (String userId in userIds) {
       try {
         // Получаем документ пользователя из коллекции 'users'
@@ -405,8 +406,11 @@ print(messageIdForEdit);
         if (userToken != null) {
           String swipe = "audio/swipe.mp3";
           // Отправляем уведомление с использованием полученного токена
+          if(!userId.contains(senderUid as Pattern)){
+            await sendNotification(userToken, title, body, userId,swipe);
+          }
 
-          await sendNotification(userToken, title, body, userId,swipe);
+
         } else {
           print('Токен пользователя не найден для пользователя с UID $userId');
         }
