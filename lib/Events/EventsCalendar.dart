@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:placeandplay/Events/EventCreationForm.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 
+import 'EventConversation.dart';
 import 'EventsScreen.dart';
 
 
@@ -31,6 +34,7 @@ class _EventsCalendarState extends State<EventsCalendar> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+  DocumentSnapshot? userDataSnapshot;
 
 
 
@@ -39,8 +43,28 @@ class _EventsCalendarState extends State<EventsCalendar> {
     super.initState();
     // Получаем данные из Firebase
     fetchEventsFromFirebase();
+    _refreshData();
   }
 
+  Future<void> _refreshData() async {
+    await _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString('uid',widget.userId);
+    print('попал сюда111111111111111111111111111111111111111111111111111111111111111111111111111111');
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('events').doc().get();
+      if (snapshot.exists) {
+        setState(() {
+          userDataSnapshot = snapshot;
+        });
+      }
+    } catch (e) {
+      print('Ошибка при загрузке данных123: $e');
+    }
+  }
 
   Future<void> fetchEventsFromFirebase() async {
     try {
@@ -78,45 +102,55 @@ class _EventsCalendarState extends State<EventsCalendar> {
   Widget build(BuildContext context) {
     String type = widget.type;
     return AlertDialog(
-      title: Text('Выберите дату'),
+      title: Row(
+        children: [
+          Text('Выберите дату'),
+          IconButton(
+            icon: const Icon(
+              Icons.info_outline_rounded,
+              color: Colors.green,
+              size: 30,
+            ),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text('Поиск ивентов'),
+                    content: Text('Ниже на календаре представлены доступные игры в $type.\n\nВыберите удобную дату для Вас.\n'
+                        'Дни подсвеченные синим цветом говорят о том,что в этот день кто-то создал ивент.\n\n'
+                        'Желаем удачи в поиске!'),
+                    actions: <Widget>[
+                      TextButton(
+                        child: const Text('Хорошо'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+
+        ],
+      ),
+
       content: Container(
         width: 400.0, // Установите фиксированную ширину
-        height: 470.0, // Установите фиксированную высоту
+        height: 550.0, // Установите фиксированную высоту
+
         child: Column(
+
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              icon: const Icon(
-                Icons.info_outline_rounded,
-                color: Colors.green,
-                size: 30,
-              ),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: const Text('Поиск ивентов'),
-                      content: Text('Ниже на календаре представлены доступные игры в $type.\n\nВыберите удобную дату для Вас.\n'
-                          'Дни подсвеченные синим цветом говорят о том,что в этот день кто-то создал ивент.\n\n'
-                          'Желаем удачи в поиске!'),
-                      actions: <Widget>[
-                        TextButton(
-                          child: const Text('Хорошо'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
+
+
             TableCalendar(
               calendarFormat: _calendarFormat,
               focusedDay: _focusedDay,
-              firstDay: DateTime(2000),
+              firstDay: DateTime(2024),
               lastDay: DateTime(2050),
               selectedDayPredicate: (day) {
                 return _selectedDay != null && isSameDay(day, _selectedDay!);
@@ -146,11 +180,53 @@ class _EventsCalendarState extends State<EventsCalendar> {
               onPressed: () {
                 if (_selectedDay != null) {
                   print('Выбрана дата: $_selectedDay');
+                  print(widget.markerName);
                   _showEventData(_selectedDay!,widget.firstName,widget.userId,widget.markerName);
                 }
               },
-              child: Text('Выбрать'),
+              child: Text('Отобразить доступные ивенты'),
             ),
+            Container(
+              margin: EdgeInsets.only(left: 10),
+              alignment: Alignment.center,
+              width: 300,
+              child: Text(
+                'Не нашли ничего интересного?\nТогда организуйте игру сами!',
+                style: TextStyle(
+                    fontSize: 15.0,
+                  fontStyle: FontStyle.normal,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+      ElevatedButton.icon(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => EventCreationForm(
+              organizer: widget.organizer,
+              activityType: type,
+              userId: widget.userId,
+              type: type,
+              typeEn: widget.typeEn,
+              address: widget.address,
+              name: widget.name,
+              phoneNumber: widget.phoneNumber, firstName: widget.firstName,
+            ),
+
+          );
+          _refreshData();
+        },
+        icon: Icon(Icons.add_card),
+        label: Text('Организовать ивент'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.deepOrangeAccent,
+          textStyle: const TextStyle(
+            fontSize: 15.0,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
           ],
         ),
       ),
@@ -218,6 +294,8 @@ class _EventsCalendarState extends State<EventsCalendar> {
   }
 
 }
+
+
 
 Widget _buildCard(String data) {
   return Card(

@@ -62,6 +62,8 @@ dependencies:
   firebase_messaging: ^14.7.5
   rxdart: ^0.27.2
   cloud_functions: ^4.6.0
+  firebase_app_check: ^0.2.1+8
+
 #  firebase_dynamic_links: ^5.4.8
 
 
