@@ -377,7 +377,6 @@ class MapsPageState extends State<MapsPage> {
             anchor: Offset(0.5, 0.5),
           ),
           onTap: () async {
-            Navigator.of(context).pop();
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => EventsCalendar(

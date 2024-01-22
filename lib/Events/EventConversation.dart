@@ -406,9 +406,9 @@ print(messageIdForEdit);
         if (userToken != null) {
           String swipe = "audio/swipe.mp3";
           // Отправляем уведомление с использованием полученного токена
-          if(!userId.contains(senderUid as Pattern)){
+          // if(!userId.contains(senderUid as Pattern)){
             await sendNotification(userToken, title, body, userId,swipe);
-          }
+          // }
 
 
         } else {

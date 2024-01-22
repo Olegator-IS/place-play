@@ -1,3 +1,4 @@
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -55,6 +56,14 @@ void main() async {
   );
   print('Может быть тут?');
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+  try {
+    await FirebaseAppCheck.instance.activate(webProvider: ReCaptchaV3Provider('recaptcha-v3-site-key'),
+        androidProvider: AndroidProvider.debug,
+        appleProvider: AppleProvider.appAttest);
+  }catch (e) {
+    print('Error activating App Check: $e');
+  }
 
   runApp(MyApp());
 }

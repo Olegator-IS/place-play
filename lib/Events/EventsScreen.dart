@@ -1,11 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../MapScreens/MapsPage.dart';
 import 'EventConversation.dart';
 
+String? token;
 class EventsScreen extends StatefulWidget {
   final List<dynamic> eventsList;
   final String markerName;
@@ -27,13 +30,21 @@ class _EventsScreenState extends State<EventsScreen> {
     super.initState();
     // Создайте Stream для слежения за изменениями в коллекции events
     eventsStream = FirebaseFirestore.instance.collection('events').snapshots();
+    _fetchToken();
 
     print('eventsTstream $eventsStream');
+  }
+
+  Future<void> _fetchToken() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    token = await messaging.getToken();
+    print('FCM Device Token: $token');
   }
 
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Доступные ивенты'),
@@ -199,11 +210,11 @@ class EventCard extends StatelessWidget {
               Container(
                 margin: EdgeInsets.only(left: 10),
                 alignment: Alignment.centerLeft,
-                width: 75,
+                width: 300,
                 child: Text(
                   startTimeEvent,
                   style: TextStyle(
-                    fontSize: 50.0,
+                    fontSize: 45.0
                   ),
                 ),
               ),
@@ -211,22 +222,29 @@ class EventCard extends StatelessWidget {
             ],
           ),
         ),
+        // Positioned(
+        //   bottom: 15, // Расположение участников сверху
+        //   left: 5,
+        //   width: 345,
+        //   child: Text(
+        //       'Участники: ${participants.map((participant) => participant['firstName']).join(', ')}',
+        //     style: TextStyle(
+        //       fontStyle: FontStyle.normal,
+        //       fontWeight: FontWeight.bold,
+        //       fontSize: 15
+        //     )
+        //     ),
+        //
+        // ),
         Positioned(
-          bottom: 10, // Расположение участников сверху
-          left: 5,
-          child: Container(
-            child: Text(
-              'Участники: ${participants.map((participant) => participant['firstName']).join(', ')}',
-            ),
-          ),
-        ),
-        Positioned(
-          top: 10, // Расположение организатора сверху
+          top: 15, // Расположение организатора сверху
           right: 5,
           child: Text(
             'Организатор: $organizer',
             style: TextStyle(
-              fontSize: 17,
+              fontSize: 15,
+              fontStyle: FontStyle.normal,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ),
@@ -238,24 +256,24 @@ class EventCard extends StatelessWidget {
 
 
             // Кнопка "Посмотреть участников" (видна всегда)
-            IconButton(
-              icon: Icon(Icons.people),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => ParticipantsDialog(
-                    participants: participantMap,
-                    organizerUid: organizerUid,
-                    currentUserUid: userId,
-                  ),
-                );
-              },
-            ),
+            // IconButton(
+            //   icon: Icon(Icons.people),
+            //   onPressed: () {
+            //     showDialog(
+            //       context: context,
+            //       builder: (context) => ParticipantsDialog(
+            //         participants: participantMap,
+            //         organizerUid: organizerUid,
+            //         currentUserUid: userId,
+            //       ),
+            //     );
+            //   },
+            // ),
             // Кнопка "Присоединиться" (видна только если пользователь еще не присоединен)
             if (!isJoined)
               IconButton(
                 icon: Icon(Icons.add),
-                onPressed: () {
+                onPressed: () async {
                   String currentUserId = userId;
                   print('Текущий пользователь нажал на Присоединиться: $currentUserId');
 
@@ -278,17 +296,46 @@ class EventCard extends StatelessWidget {
                     participants.add(newParticipant);
 
                     // Вызовите функцию для присоединения к мероприятию
-                    joinEvent(markerName, dateEvent, startTimeEvent, currentUserId, firstNameParticipant, organizerUid,eventId);
+                    await joinEvent(markerName, dateEvent, startTimeEvent, currentUserId, firstNameParticipant, organizerUid,eventId);
+
+                    List<dynamic>? currentEventTypes = [];
+                    List<dynamic>? usersId = [];
+
+                    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+                      'fcmToken': token,
+                    });
+
+
+                    String place = eventName;
+
+
+                    sendNotificationToSubscribers(organizerUid,'Ура! Пользователь $firstName присоединился!','Игрок готов к игре в $place');
+
+
                   }
                 },
               ),
           ],
         ),
+        Positioned(
+          bottom: 15,
+          left: 5,
+          child: Text(
+            '${isRegistered ? 'Подтверждён' : 'Ожидает подтверждения'}',
+            style: TextStyle(
+              fontSize: 10,
+              fontStyle: FontStyle.normal,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+
+
 
         if (isJoined)
           Positioned(
-            bottom: 25, // Поднимите кнопку чуть ниже относительно верхнего края
-            left: 5,
+            top: 90, // Поднимите кнопку чуть ниже относительно верхнего края
+            right: 5,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -315,7 +362,7 @@ class EventCard extends StatelessWidget {
                           icon: Icon(Icons.chat),
                           label: Text('Открыть чат$unreadMessageCount'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
+                            backgroundColor: Colors.deepOrangeAccent,
                             textStyle: const TextStyle(
                               fontSize: 15.0,
                               fontWeight: FontWeight.bold,
@@ -332,41 +379,98 @@ class EventCard extends StatelessWidget {
           ),
 
         // Кнопка "Посмотреть участников"
-        // Positioned(
-        //   bottom: 75, // Поднимите кнопку еще ниже
-        //   left: 5,
-        //   child: SingleChildScrollView(
-        //     scrollDirection: Axis.horizontal,
-        //     child: Row(
-        //       mainAxisAlignment: MainAxisAlignment.center,
-        //       children: [
-        //         ElevatedButton.icon(
-        //           onPressed: () {
-        //             showDialog(
-        //               context: context,
-        //               builder: (context) => ParticipantsDialog(
-        //                 participants: participantMap,
-        //                 organizerUid: organizerUid,
-        //                 currentUserUid: userId,
-        //               ),
-        //             );
-        //           },
-        //           icon: Icon(Icons.group),
-        //           label: Text('Посмотреть участников'),
-        //           style: ElevatedButton.styleFrom(
-        //             backgroundColor: Colors.indigo,
-        //             textStyle: const TextStyle(
-        //               fontSize: 15.0,
-        //               fontWeight: FontWeight.bold,
-        //             ),
-        //           ),
-        //         ),
-        //       ],
-        //     ),
-        //   ),
-        // ),
+        Positioned(
+          top: 35, // Поднимите кнопку еще ниже
+          right: 5,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => ParticipantsDialog(
+                        participants: participantMap,
+                        organizerUid: organizerUid,
+                        currentUserUid: userId,
+                      ),
+                    );
+                  },
+                  icon: Icon(Icons.group),
+                  label: Text('Посмотреть участников'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo,
+                    textStyle: const TextStyle(
+                      fontSize: 12.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: 20.0),
       ],
     );
+  }
+
+  Future<void> sendNotificationToSubscribers(String organizerUid, String title, String body) async {
+
+    try {
+      // Получаем документ пользователя из коллекции 'users'
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(organizerUid).get();
+
+      // Извлекаем токен пользователя
+      String? userToken = (userDoc.data() as Map<String, dynamic>?)?['fcmToken'];
+
+
+      print('userToken $userToken');
+      // Проверяем, есть ли токен
+      if (userToken != null) {
+        String swipe = "audio/swipe.mp3";
+        // Отправляем уведомление с использованием полученного токена
+
+
+        await sendNotification(userToken, title, body, organizerUid,swipe);
+      } else {
+        print('Токен пользователя не найден для пользователя с UID $organizerUid');
+      }
+    } catch (e) {
+      print('Ошибка при отправке уведомления пользователю с UID $organizerUid: $e');
+    }
+
+  }
+
+  Future<void> sendNotification(String token, String title, String body, String sender,String sound) async {
+    final HttpsCallable sendNotificationCallable =
+    FirebaseFunctions.instance.httpsCallable('sendNotification');
+
+    print(token);
+
+    // Создаем объект payload
+    final payload = {
+      'token': token,
+      'title': title,
+      'body': body,
+      'sender': sender,
+      'sound':sound
+
+    };
+
+    try {
+      final result = await sendNotificationCallable.call(payload);
+      // здесь вы можете обработать результат вызова
+    } catch (e) {
+      print('Error calling sendNotification: $e');
+    }
+  }
+
+  Future<void> subscribeToTopic(String topic) async {
+    await FirebaseMessaging.instance.subscribeToTopic(topic);
+    print('Пользователь подписан на топик: $topic');
   }
 
   Future<void> joinEvent(String markerName, String dateEvent, String startTimeEvent, String currentUserId, String firstNameParticipant,String organizerUid,String eventId) async {

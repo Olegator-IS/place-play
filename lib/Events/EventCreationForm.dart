@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -272,25 +273,39 @@ String place = widget.name.toUpperCase();
   Future<void> sendNotification(String token, String title, String body, String sender,String sound) async {
     final HttpsCallable sendNotificationCallable =
     FirebaseFunctions.instance.httpsCallable('sendNotification');
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(sender).get();
 
-    print(token);
+    String? userToken = (userDoc.data() as Map<String, dynamic>?)?['fcmToken'];    print(token);
 
+
+    print('NEW TOKEN $userToken');
     // Создаем объект payload
     final payload = {
-      'token': token,
+      'token': userToken,
       'title': title,
       'body': body,
-      'sender': sender,
-      'sound':sound
+      'sender': 'test',
+      'sound':'default'
 
     };
 
+
+
+
+
+    HttpsCallable a = FirebaseFunctions.instance.httpsCallable("sendNotification");
+
     try {
-      final result = await sendNotificationCallable.call(payload);
-      // здесь вы можете обработать результат вызова
+      final x = await a(payload);
+      print(x.data);
+    } on FirebaseFunctionsException catch (e) {
+      // Возможно, здесь можно получить дополнительную информацию из e.details
+      print('FirebaseFunctionsException: ${e.message}');
+      print('Details: ${e.details}');
     } catch (e) {
-      print('Error calling sendNotification: $e');
+      print('Error: $e');
     }
+
   }
 
   Future<void> subscribeToTopic(String topic) async {
@@ -504,15 +519,15 @@ String place = widget.name.toUpperCase();
                 style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold)),
-            CheckboxListTile(
-              title: const Text('Зарегистрироваться как участник тоже?'),
-              value: isBooked,
-              onChanged: (value) {
-                setState(() {
-                  isBooked = value ?? false;
-                });
-              },
-            ),
+            // CheckboxListTile(
+            //   title: const Text('Зарегистрироваться как участник тоже?'),
+            //   value: isBooked,
+            //   onChanged: (value) {
+            //     setState(() {
+            //       isBooked = value ?? false;
+            //     });
+            //   },
+            // ),
           ],
         ),
       ),
@@ -617,15 +632,16 @@ String place = widget.name.toUpperCase();
 
 
 
-            if(isBooked){
-              events.add(newEvent);
-              addOrUpdateEvent(newEvent,widget.name);
-            }else{
-              eventsWithOut.add(eventWithoutParticipant);
-              addOrUpdateEventWithOut(eventWithoutParticipant,widget.name);
-            }
+            // if(isBooked){
+            //   events.add(newEvent);
+            //   addOrUpdateEvent(newEvent,widget.name);
+            // }else{
+            //   eventsWithOut.add(eventWithoutParticipant);
+            //   addOrUpdateEventWithOut(eventWithoutParticipant,widget.name);
+            // }
 
-
+            events.add(newEvent);
+            addOrUpdateEvent(newEvent,widget.name);
 
 
 
