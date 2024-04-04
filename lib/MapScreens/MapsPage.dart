@@ -39,10 +39,12 @@ class MapsPage extends StatefulWidget {
 class TextMarker {
   final LatLng position;
   final String text;
+  final String typeEn;
 
   TextMarker({
     required this.position,
     required this.text,
+    required this.typeEn
   });
 }
 
@@ -217,9 +219,15 @@ class MapsPageState extends State<MapsPage> {
 
   void _addTextMarkersToMap() async {
     List<TextMarker> textMarkersCopy = List.from(_textMarkers); // Создаем копию _textMarkers
-
+    Color color = Colors.blue;
     for (var textMarker in textMarkersCopy) {
-      final customMarker = await createTextMarkerIcon(textMarker.text, Colors.white, Colors.black);
+
+     String sport = textMarker.typeEn;
+
+     print(sport);
+
+     print("Circle");
+      final customMarker = await createTextMarkerIcon(textMarker.text, Colors.black, color);
       final markerPosition = LatLng(textMarker.position.latitude - 0.0004, textMarker.position.longitude);
       // В данном примере я сдвинул позицию маркера на 0.01 градуса (что примерно соответствует нескольким сантиметрам)
 
@@ -404,6 +412,8 @@ class MapsPageState extends State<MapsPage> {
           _textMarkers.add(TextMarker(
             position: LatLng(coordinates.latitude,coordinates.longitude),
             text: name,
+            typeEn: type
+
           ));
 
           _addTextMarkersToMap();
