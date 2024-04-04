@@ -235,7 +235,8 @@ class _EventsListState extends State<EventsList> {
               // Add more filter options as needed
             ],
           ),
-    Expanded(
+
+          Expanded(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: events.snapshots(),
               builder: (context, snapshot) {
@@ -305,20 +306,32 @@ class _EventsListState extends State<EventsList> {
                       break;
                   }
 
-                  return ListView.builder(
-                    itemCount: eventsList.length,
-                    itemBuilder: (context, index) {
-                      Map<String, dynamic> event = eventsList[index];
-                      bool isOrganizer = event['uid'] == widget.userId;
-                      bool isRegistered = event['isRegistered'] ?? false;
-
-                      return ListTile(
-                        title: Text(event['eventName'] ?? ''),
+                  return Expanded(
+                      child: ListView.separated(
+                      itemCount: eventsList.length,
+                      separatorBuilder: (BuildContext context, int index) {
+                    return SizedBox(height: 8); // Пространство между контейнерами
+                  },
+                itemBuilder: (BuildContext context, int index) {
+                Map<String, dynamic> event = eventsList[index];
+                bool isOrganizer = event['uid'] == widget.userId;
+                bool isRegistered = event['isRegistered'] ?? false;
+                return Container(
+                        color: event['isRegistered'] == true ? Colors.green : Colors.red,
+                       child: ListTile(
+                        title: Text(
+                          event['eventName'] ?? '',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                            color: Colors.black,
+                          ),
+                        ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(event['dateEvent'] ?? ''),
-                            SizedBox(height: 4.0),
+                            SizedBox(height: 10.0),
                             Text(
 
                                   'Вы ${currentIndex == 0 ? 'организатор' : 'участник'}',
@@ -330,10 +343,10 @@ class _EventsListState extends State<EventsList> {
 
                               Text(
                                 event['isRegistered'] == true
-                                    ? 'Мероприятие подтверждено, начнется ${event['startTimeEvent']}'
+                                    ? 'Мероприятие подтверждено, \nначало ожидается в  ${event['startTimeEvent']}'
                                     : 'МЕРОПРИЯТИЕ НЕ ПОДТВЕРЖДЕНО! ОЖИДАЕТСЯ РЕГИСТРАЦИЯ',
                                 style: TextStyle(
-                                  color: event['isRegistered'] == true ? Colors.green : Colors.red,
+                                  color: event['isRegistered'] == true ? Colors.white : Colors.white,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -517,12 +530,11 @@ class _EventsListState extends State<EventsList> {
                             ),
                           );
                         },
-                      );
-
-
-                    },
+                       ),
+                );
+                },
+                      ),
                   );
-
                 }
               },
             ),
