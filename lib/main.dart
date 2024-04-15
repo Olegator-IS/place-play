@@ -3,8 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:placeandplay/WelcomeScreens/LoginPage.dart';
 import 'package:placeandplay/RegistrationScreens/RegistrationPage.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 import 'EmptyScreen.dart';
 import 'PresenceService.dart';
 import 'Services/FirebaseMessagingService.dart';
@@ -64,7 +67,6 @@ void main() async {
   }catch (e) {
     print('Error activating App Check: $e');
   }
-
   runApp(MyApp());
 }
 
@@ -143,6 +145,7 @@ class _AppStateTrackerState extends State<_AppStateTracker> with WidgetsBindingO
   void initState() {
     super.initState();
     WidgetsBinding.instance!.addObserver(this);
+
   }
 
   @override
@@ -168,6 +171,9 @@ class _AppStateTrackerState extends State<_AppStateTracker> with WidgetsBindingO
         break;
     }
   }
+
+
+
 
   Future<void> setOnlineStatus(bool isOnline) async {
     setState(() {
