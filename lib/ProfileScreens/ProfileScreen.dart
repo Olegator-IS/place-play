@@ -5,6 +5,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:placeandplay/EmptyScreen.dart';
 import 'package:placeandplay/ProfileScreens/EditProfileScreen.dart';
@@ -13,6 +14,8 @@ import 'package:placeandplay/WelcomeScreens/LoginPage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:permission_handler/permission_handler.dart';
+
 
 
 
@@ -79,9 +82,48 @@ class _ProfileScreenState extends State<ProfileScreen>
   double _activityHeight = 0.0; // Высота поля активности
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
 
+  void checkAndRequestNotificationPermission() async {
+    bool hasPermission = await checkNotificationPermission();
+    if (!hasPermission) {
+      // Если разрешение не предоставлено, запросите его у пользователя
+      PermissionStatus status = await Permission.notification.request();
+
+      print('STATUS $status');
+      if (status.isPermanentlyDenied) {
+        // Отображение сообщения о том, что разрешение нужно включить вручную в настройках
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text("Включите уведомления"),
+              content: Text("Для получения уведомлений необходимо включить их в настройках."),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text("ОК"),
+                ),
+              ],
+            );
+          },
+        );
+
+        // Открытие настроек системы, где можно включить уведомления
+        // await openAppSettings();
+      }
+    }
+  }
+
+  Future<bool> checkNotificationPermission() async {
+    PermissionStatus status = await Permission.notification.status;
+    return status.isGranted;
+  }
+
   @override
   void initState() {
     super.initState();
+    checkAndRequestNotificationPermission(); // Вызов функции проверки разрешения
     print('testttttttttttttttttttttttt123');
     _presenceSubscription = PresenceService.streamUserPresence(widget.userId).listen((DocumentSnapshot snapshot) {
       if (snapshot.exists) {
