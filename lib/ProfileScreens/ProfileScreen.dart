@@ -662,9 +662,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                       Text(
                         profileCompletionNotification,
                         style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold// Цвет текста для уведомления
+                            color: Colors.red,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold// Цвет текста для уведомления
                         ),
                       ),
 
@@ -914,45 +914,45 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
 
       bottomNavigationBar: BottomNavigationBar(
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Профиль',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map),
-            label: 'Карта',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.star),
-            label: 'События',
-          ),
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person),
+              label: 'Профиль',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.map),
+              label: 'Карта',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.star),
+              label: 'События',
+            ),
 
-        ],
-        currentIndex: _currentIndex, // Устанавливайте индекс текущей вкладки
-        onTap: (int index) {
-          if (index == 0) {
-            // Пользователь выбрал вкладку "Карта", перенаправляем его на пустую страницу
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => ProfileScreen(userId: widget.userId),
-              ),
-            );
-          } else if(index == 1){
-            print('widget.userId $widget.userId');
-            print(widget.userId);
-          Navigator.of(context).push(
-            MaterialPageRoute(
-                builder: (context) => MapsPage(userId: widget.userId),
-              ),
-            );
-          }else if(index == 2){
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => EventsList(userId: widget.userId),
-              ),
-            );
-          }
+          ],
+          currentIndex: _currentIndex, // Устанавливайте индекс текущей вкладки
+          onTap: (int index) {
+            if (index == 0) {
+              // Пользователь выбрал вкладку "Карта", перенаправляем его на пустую страницу
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => ProfileScreen(userId: widget.userId),
+                ),
+              );
+            } else if(index == 1){
+              print('widget.userId $widget.userId');
+              print(widget.userId);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => MapsPage(userId: widget.userId),
+                ),
+              );
+            }else if(index == 2){
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => EventsList(userId: widget.userId),
+                ),
+              );
+            }
             // Для других вкладок обновляем индекс
             setState(() {
               _currentIndex = index;
